@@ -124,6 +124,37 @@
       border-color: #fffaf4;
     }
 
+    .sidebar__pwa {
+      margin-top: auto;
+      padding-top: 14px;
+      border-top: 1px solid rgba(255, 248, 240, 0.12);
+    }
+    .sidebar-install {
+      width: 100%;
+      padding: 12px 14px;
+      min-height: var(--tap);
+      border-radius: 12px;
+      border: 1px solid rgba(255, 248, 240, 0.4);
+      background: #fffaf4;
+      color: var(--brand);
+      font-weight: 700;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    .sidebar-install[hidden] {
+      display: none !important;
+    }
+    .sidebar-install:disabled {
+      opacity: 0.55;
+      cursor: default;
+    }
+    .sidebar__pwa-hint.install-hint {
+      margin: 8px 0 0;
+      font-size: 11px;
+      line-height: 1.35;
+      color: #c4a990;
+    }
+
     .main-wrap {
       flex: 1;
       min-width: 0;
@@ -483,6 +514,7 @@
 
     button:focus-visible,
     .sidebar-link:focus-visible,
+    .sidebar-install:focus-visible,
     .tab-bar__btn:focus-visible {
       outline: 3px solid #f59e0b;
       outline-offset: 2px;
@@ -697,6 +729,10 @@
           <button type="button" class="sidebar-link" data-panel="donnees" onclick="setActivePanel('donnees')">Données</button>
         </nav>
       </div>
+      <div class="sidebar__pwa">
+        <button type="button" class="sidebar-install btn-install-pwa" hidden onclick="installPWA()">Installer l’application</button>
+        <p class="sidebar__pwa-hint install-hint"></p>
+      </div>
     </aside>
 
     <header class="mobile-shell-header" role="banner">
@@ -800,19 +836,20 @@
             <p class="muted" style="margin:0 0 12px;">
               Ajoutez à l’écran d’accueil pour ouvrir comme une app (plein écran, hors navigateur).
             </p>
-            <button type="button" class="btn-install" id="btn-install-pwa" hidden onclick="installPWA()">Installer l’application</button>
-            <p class="install-hint" id="install-hint"></p>
+            <button type="button" class="btn-install btn-install-pwa" hidden onclick="installPWA()">Installer l’application</button>
+            <p class="install-hint muted" style="margin:10px 0 0; font-size:12px; line-height:1.45;"></p>
           </div>
           <div class="card">
             <h2>Sauvegardes</h2>
             <p class="muted" style="margin:0 0 10px; font-size:13px;">
-              <strong>Importer</strong> : <span class="text-danger">remplace tout</span> (stocks, ventes, panier).
+              <strong>Exporter</strong> : enregistre <strong>3 fichiers CSV</strong> (séparateur <strong>;</strong>, UTF‑8, ouvrables dans Excel).<br />
+              <strong>Importer</strong> : <span class="text-danger">remplace tout</span> (stocks, ventes, panier). Sélectionne en une fois les <strong>3 CSV</strong> de l’export, ou uniquement le CSV stock pour réinitialiser les ventes.
             </p>
             <div class="donnees-actions">
-              <button type="button" class="btn-brown" onclick="exportData()">Exporter</button>
+              <button type="button" class="btn-brown" onclick="exportData()">Exporter (CSV)</button>
               <button type="button" class="btn-light" onclick="document.getElementById('importFile').click()">Importer</button>
             </div>
-            <input type="file" id="importFile" accept="application/json,.json" hidden />
+            <input type="file" id="importFile" accept=".csv,text/csv" multiple hidden />
           </div>
           <div class="card">
             <h2>Réinitialiser</h2>
@@ -861,7 +898,247 @@
 
     const STORAGE_KEY = "caisse_event_data_v4";
     const LEGACY_STORAGE_KEYS = ["caisse_event_google_sheet_v3", "caisse_event_google_sheet_v2"];
-    const EXPORT_VERSION = 1;
+    const PAYMENT_METHODS = ["Cash", "MVola", "Orange Money"];
+    const CSV_EXPORT_NAMES = {
+      stock: "produits_stock.csv",
+      venteHead: "ventes_entete.csv",
+      venteLines: "ventes_lignes.csv"
+    };
+
+    function parseIntFr(s) {
+      if (s == null || s === "") return 0;
+      const t = String(s).replace(/\u00a0/g, " ").replace(/\s/g, "").replace(/,/g, ".");
+      const n = Math.round(Number(t));
+      return Number.isFinite(n) ? n : 0;
+    }
+
+    function csvEscapeCell(v) {
+      const s = v == null ? "" : String(v);
+      if (/[;"\r\n]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
+      return s;
+    }
+
+    function splitCSVLine(line, delim) {
+      const out = [];
+      let cur = "";
+      let inQ = false;
+      for (let i = 0; i < line.length; i++) {
+        const c = line[i];
+        if (c === '"') {
+          if (inQ && line[i + 1] === '"') {
+            cur += '"';
+            i++;
+          } else inQ = !inQ;
+        } else if (!inQ && c === delim) {
+          out.push(cur);
+          cur = "";
+        } else cur += c;
+      }
+      out.push(cur);
+      return out;
+    }
+
+    function parseCSVText(text) {
+      text = String(text).replace(/^\uFEFF/, "");
+      const rawLines = text.split(/\r?\n/);
+      const lines = [];
+      for (const ln of rawLines) {
+        if (!ln.length) continue;
+        if (ln.startsWith("#")) continue;
+        lines.push(ln);
+      }
+      if (!lines.length) return { headers: [], rows: [] };
+      const delim = lines[0].includes(";") ? ";" : ",";
+      const headers = splitCSVLine(lines[0], delim).map((h) => h.trim());
+      const rows = [];
+      for (let i = 1; i < lines.length; i++) {
+        const cells = splitCSVLine(lines[i], delim);
+        if (cells.every((c) => !String(c).trim())) continue;
+        const row = {};
+        headers.forEach((h, j) => {
+          row[h] = cells[j] != null ? String(cells[j]).trim() : "";
+        });
+        rows.push(row);
+      }
+      return { headers, rows };
+    }
+
+    function rowsToCSV(headers, rows) {
+      const lines = [headers.map(csvEscapeCell).join(";")];
+      for (const row of rows) {
+        lines.push(headers.map((h) => csvEscapeCell(row[h])).join(";"));
+      }
+      return "\uFEFF" + lines.join("\r\n");
+    }
+
+    function buildStocksCSV() {
+      const headers = ["id_produit", "nom", "prix_ariary", "stock_initial", "stock_actuel"];
+      const rows = PRODUCTS.map((p) => ({
+        id_produit: p.id,
+        nom: p.name,
+        prix_ariary: p.price,
+        stock_initial: state.stockInitial[p.id] || 0,
+        stock_actuel: state.stocks[p.id] || 0
+      }));
+      return rowsToCSV(headers, rows);
+    }
+
+    function buildVentesEnteteCSV() {
+      const headers = [
+        "id_vente",
+        "date",
+        "heure",
+        "moyen_paiement",
+        "total_ariary",
+        "recu_ariary",
+        "rendu_ariary"
+      ];
+      const rows = state.sales.map((s) => ({
+        id_vente: s.id,
+        date: s.date,
+        heure: s.time,
+        moyen_paiement: s.paymentMethod,
+        total_ariary: s.total,
+        recu_ariary: s.paid,
+        rendu_ariary: s.change
+      }));
+      return rowsToCSV(headers, rows);
+    }
+
+    function buildVentesLignesCSV() {
+      const headers = ["id_vente", "id_produit", "nom_produit", "prix_unitaire_ariary", "quantite"];
+      const rows = [];
+      state.sales.forEach((s) => {
+        (s.items || []).forEach((it) => {
+          rows.push({
+            id_vente: s.id,
+            id_produit: it.id,
+            nom_produit: it.name,
+            prix_unitaire_ariary: it.price,
+            quantite: it.qty
+          });
+        });
+      });
+      return rowsToCSV(headers, rows);
+    }
+
+    function csvFirstDataLine(text) {
+      const t = String(text).replace(/^\uFEFF/, "");
+      for (const ln of t.split(/\r?\n/)) {
+        if (!ln.trim() || ln.trim().startsWith("#")) continue;
+        return ln;
+      }
+      return "";
+    }
+
+    function stateFromCsvMaps(maps) {
+      let stockKey = Object.keys(maps).find(
+        (k) => k === CSV_EXPORT_NAMES.stock.toLowerCase() || (k.includes("stock") && k.endsWith(".csv"))
+      );
+      if (!stockKey) {
+        stockKey = Object.keys(maps).find((k) => {
+          if (!k.endsWith(".csv")) return false;
+          const first = csvFirstDataLine(maps[k]);
+          return /^id_produit/i.test(first.split(";")[0] || first.split(",")[0] || "");
+        });
+      }
+      const headKey = Object.keys(maps).find(
+        (k) =>
+          k.includes("entete") ||
+          k.includes("entête") ||
+          k.includes("ventes_entete") ||
+          /^ventes[^.]*entete/i.test(k)
+      );
+      const linesKey = Object.keys(maps).find(
+        (k) => k.includes("lignes") || k.includes("ventes_lignes")
+      );
+
+      if (!stockKey) {
+        throw new Error(
+          "Fichier stock introuvable. Attendu : " +
+            CSV_EXPORT_NAMES.stock +
+            " (ou un CSV dont la première colonne s’appelle id_produit)."
+        );
+      }
+
+      const stockParsed = parseCSVText(maps[stockKey]);
+      const stocks = { ...emptyStocks() };
+      const stockInitial = { ...emptyStocks() };
+      const knownIds = new Set(PRODUCTS.map((p) => p.id));
+
+      for (const row of stockParsed.rows) {
+        const id = parseIntFr(row.id_produit != null ? row.id_produit : row["id produit"]);
+        if (!knownIds.has(id)) continue;
+        stockInitial[id] = parseIntFr(row.stock_initial);
+        stocks[id] = parseIntFr(row.stock_actuel != null ? row.stock_actuel : row["stock actuel"]);
+      }
+
+      const sales = [];
+      if (linesKey && !headKey) {
+        throw new Error("Fichier ventes_entete.csv manquant (obligatoire si des lignes de vente sont fournies).");
+      }
+      if (headKey && !linesKey) {
+        throw new Error("Fichier ventes_lignes.csv manquant (obligatoire si des ventes sont fournies).");
+      }
+
+      if (headKey && linesKey) {
+        const heads = parseCSVText(maps[headKey]);
+        const lines = parseCSVText(maps[linesKey]);
+        const bySale = {};
+        for (const r of lines.rows) {
+          const sid = String(r.id_vente != null ? r.id_vente : "").trim();
+          if (!sid) continue;
+          if (!bySale[sid]) bySale[sid] = [];
+          const pid = parseIntFr(r.id_produit);
+          const prod = PRODUCTS.find((p) => p.id === pid);
+          bySale[sid].push({
+            id: pid,
+            name: (r.nom_produit || (prod && prod.name) || "").trim() || (prod ? prod.name : "?"),
+            price: parseIntFr(r.prix_unitaire_ariary != null ? r.prix_unitaire_ariary : r.prix_unitaire),
+            qty: Math.max(0, parseIntFr(r.quantite))
+          });
+        }
+        for (const r of heads.rows) {
+          const id = String(r.id_vente != null ? r.id_vente : "").trim();
+          if (!id) continue;
+          let pm = String(r.moyen_paiement || "").trim();
+          if (!PAYMENT_METHODS.includes(pm)) pm = "Cash";
+          const items = (bySale[id] || []).filter((it) => it.qty > 0);
+          sales.push({
+            id,
+            date: String(r.date || "").trim() || new Date().toLocaleDateString("fr-FR"),
+            time: String(r.heure || "").trim() || new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }),
+            paymentMethod: pm,
+            total: parseIntFr(r.total_ariary != null ? r.total_ariary : r.total),
+            paid: parseIntFr(r.recu_ariary != null ? r.recu_ariary : r.recu),
+            change: parseIntFr(r.rendu_ariary != null ? r.rendu_ariary : r.rendu),
+            items
+          });
+        }
+      }
+
+      return normalizeLoadedState({ stocks, stockInitial, cart: [], sales });
+    }
+
+    function tryImportFromCsvFiles(fileList) {
+      return Promise.all(
+        Array.from(fileList)
+          .filter((f) => f.name.toLowerCase().endsWith(".csv"))
+          .map(
+            (f) =>
+              new Promise((res, rej) => {
+                const r = new FileReader();
+                r.onload = () => res({ name: f.name.toLowerCase(), text: String(r.result || "") });
+                r.onerror = () => rej(new Error("Lecture CSV impossible."));
+                r.readAsText(f, "UTF-8");
+              })
+          )
+      ).then((arr) => {
+        const m = {};
+        arr.forEach((x) => (m[x.name] = x.text));
+        return stateFromCsvMaps(m);
+      });
+    }
 
     function formatAr(v) {
       return Number(v || 0).toLocaleString("fr-FR") + " Ar";
@@ -934,27 +1211,11 @@
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     }
 
-    function buildExportPayload() {
-      return {
-        version: EXPORT_VERSION,
-        app: "caisse-event-premium",
-        exportedAt: new Date().toISOString(),
-        state: {
-          stocks: { ...state.stocks },
-          stockInitial: { ...state.stockInitial },
-          cart: JSON.parse(JSON.stringify(state.cart)),
-          sales: JSON.parse(JSON.stringify(state.sales))
-        }
-      };
-    }
-
-    function exportData() {
-      const json = JSON.stringify(buildExportPayload(), null, 2);
-      const blob = new Blob([json], { type: "application/json;charset=utf-8" });
+    function downloadTextFile(filename, text, mime) {
+      const blob = new Blob([text], { type: mime || "text/csv;charset=utf-8" });
       const a = document.createElement("a");
-      const name = "sauvegarde-caisse-" + new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19) + ".json";
       a.href = URL.createObjectURL(blob);
-      a.download = name;
+      a.download = filename;
       a.rel = "noopener";
       document.body.appendChild(a);
       a.click();
@@ -962,43 +1223,66 @@
       URL.revokeObjectURL(a.href);
     }
 
+    function exportData() {
+      const stamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+      const prefix = "caisse-latabatra-" + stamp + "-";
+      downloadTextFile(prefix + CSV_EXPORT_NAMES.stock, buildStocksCSV());
+      setTimeout(() => downloadTextFile(prefix + CSV_EXPORT_NAMES.venteHead, buildVentesEnteteCSV()), 280);
+      setTimeout(() => downloadTextFile(prefix + CSV_EXPORT_NAMES.venteLines, buildVentesLignesCSV()), 560);
+    }
+
+    function applyImportedState(trial) {
+      if (
+        !confirm(
+          "L’import remplace toutes les données sur cet appareil (stocks, ventes, panier). Continuer ?"
+        )
+      ) {
+        return;
+      }
+      state = trial;
+      saveState();
+      const paid = document.getElementById("paid");
+      const pm = document.getElementById("paymentMethod");
+      if (paid) paid.value = "";
+      if (pm) pm.value = "Cash";
+      render();
+      setActivePanel("dashboard");
+      alert("Import terminé.");
+    }
+
     function importFromFile(ev) {
       const input = ev.target;
-      const file = input.files && input.files[0];
+      const files = input.files;
       input.value = "";
-      if (!file) return;
+      if (!files || !files.length) return;
 
-      const reader = new FileReader();
-      reader.onload = () => {
-        try {
-          const data = JSON.parse(reader.result);
-          const rawState = data.state != null ? data.state : data;
-          if (!rawState || typeof rawState !== "object") {
-            throw new Error("invalid");
-          }
-          const trial = normalizeLoadedState(rawState);
-          if (
-            !confirm(
-              "L’import remplace toutes les données sur cet appareil (stocks, ventes, panier). Continuer ?"
-            )
-          ) {
-            return;
-          }
-          state = trial;
-          saveState();
-          const paid = document.getElementById("paid");
-          const pm = document.getElementById("paymentMethod");
-          if (paid) paid.value = "";
-          if (pm) pm.value = "Cash";
-          render();
-          setActivePanel("dashboard");
-          alert("Import terminé.");
-        } catch (err) {
-          alert("Fichier invalide.");
-        }
-      };
-      reader.onerror = () => alert("Lecture impossible.");
-      reader.readAsText(file, "UTF-8");
+      const allCsv =
+        files.length > 0 &&
+        Array.from(files).every((f) => f.name.toLowerCase().endsWith(".csv"));
+
+      if (files.length > 1 && allCsv) {
+        tryImportFromCsvFiles(files)
+          .then(applyImportedState)
+          .catch((err) => alert(err.message || "Import CSV impossible."));
+        return;
+      }
+
+      if (files.length > 1) {
+        alert("Sélectionnez uniquement des fichiers .csv (export de l’app), en une fois.");
+        return;
+      }
+
+      const file = files[0];
+      const name = file.name.toLowerCase();
+
+      if (name.endsWith(".csv")) {
+        tryImportFromCsvFiles(files)
+          .then(applyImportedState)
+          .catch((err) => alert(err.message || "Import CSV impossible."));
+        return;
+      }
+
+      alert("Format non reconnu. Utilisez uniquement des fichiers .csv.");
     }
 
     function updateStock(id, value) {
@@ -1305,24 +1589,32 @@
     }
 
     function updateInstallUI() {
-      const btn = document.getElementById("btn-install-pwa");
-      const hint = document.getElementById("install-hint");
-      if (!btn || !hint) return;
+      const btns = document.querySelectorAll(".btn-install-pwa");
+      const hints = document.querySelectorAll(".install-hint");
+      if (!btns.length) return;
+
+      let hintText;
+      let btnHidden;
 
       if (isStandalonePWA()) {
-        btn.hidden = true;
-        hint.textContent = "Mode app installé.";
-        return;
+        hintText = "Mode app installé.";
+        btnHidden = true;
+      } else if (deferredPrompt) {
+        hintText = "Installez pour un raccourci sur l’écran d’accueil.";
+        btnHidden = false;
+      } else {
+        hintText =
+          "Chrome / Edge : menu ⋮ → « Installer l’application ». iOS : Partager → « Sur l’écran d’accueil ».";
+        btnHidden = true;
       }
-      if (deferredPrompt) {
-        btn.hidden = false;
+
+      btns.forEach((btn) => {
+        btn.hidden = btnHidden;
         btn.disabled = false;
-        hint.textContent = "Installez pour un raccourci sur l’écran d’accueil.";
-        return;
-      }
-      btn.hidden = true;
-      hint.textContent =
-        "Chrome / Edge : menu ⋮ → « Installer l’application ». iOS : Partager → « Sur l’écran d’accueil ».";
+      });
+      hints.forEach((h) => {
+        h.textContent = hintText;
+      });
     }
 
     async function installPWA() {
