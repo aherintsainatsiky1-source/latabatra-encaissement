@@ -1,10 +1,10 @@
 {
-  "name": "Caisse Event",
+  "name": "Caisse Event Premium",
   "short_name": "Caisse",
   "start_url": "./",
   "display": "standalone",
-  "background_color": "#f5efe6",
-  "theme_color": "#4e342e",
-  "description": "Caisse simple pour event",
+  "background_color": "#f6efe7",
+  "theme_color": "#3b2418",
+  "description": "Caisse event premium avec Google Sheet",
   "icons": []
 }
