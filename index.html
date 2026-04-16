@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Caisse Event</title>
+
+<style>
+body { font-family: Arial; background:#f1f5f9; margin:0; }
+.container { padding:10px; max-width:1200px; margin:auto; }
+.card { background:white; padding:15px; border-radius:10px; margin-bottom:10px; }
+button { padding:10px; border:none; border-radius:8px; cursor:pointer; }
+.btn { background:#0f172a; color:white; }
+.grid { display:grid; grid-template-columns:2fr 1fr; gap:10px; }
+.product { border:1px solid #ddd; padding:10px; border-radius:8px; cursor:pointer; }
+</style>
+
+</head>
+<body>
+
+<div class="container">
+<h1>Caisse Event</h1>
+
+<div class="grid">
+
+<div>
+
+<div class="card">
+<h2>Produits</h2>
+<div id="products"></div>
+</div>
+
+</div>
+
+<div>
+
+<div class="card">
+<h2>Panier</h2>
+<div id="cart"></div>
+<p>Total : <span id="total">0</span> Ar</p>
+
+<input id="paid" placeholder="Montant payé" type="number">
+<p>Rendu : <span id="change">0</span> Ar</p>
+
+<button class="btn" onclick="pay()">Valider</button>
+</div>
+
+</div>
+
+</div>
+</div>
+
+<script>
+
+const products = [
+{name:"Flan vanille", price:15000},
+{name:"Flan framboise", price:19000},
+{name:"Cake", price:10000},
+{name:"Tarte", price:20000},
+{name:"Jus", price:10000}
+];
+
+let cart = [];
+
+function renderProducts(){
+let html="";
+products.forEach((p,i)=>{
+html += `<div class="product" onclick="add(${i})">${p.name} - ${p.price} Ar</div>`;
+});
+document.getElementById("products").innerHTML = html;
+}
+
+function add(i){
+cart.push(products[i]);
+renderCart();
+}
+
+function renderCart(){
+let total=0;
+let html="";
+cart.forEach(p=>{
+total += p.price;
+html += `<div>${p.name} - ${p.price}</div>`;
+});
+document.getElementById("cart").innerHTML = html;
+document.getElementById("total").innerText = total;
+
+let paid = document.getElementById("paid").value || 0;
+document.getElementById("change").innerText = paid - total;
+}
+
+function pay(){
+alert("Vente validée");
+cart=[];
+renderCart();
+}
+
+document.getElementById("paid").addEventListener("input", renderCart);
+
+renderProducts();
+
+</script>
+
+</body>
+</html>
