@@ -1,492 +1,577 @@
-import React, { useEffect, useMemo, useState } from "react";
-import {
-  ShoppingCart,
-  Trash2,
-  Plus,
-  Minus,
-  Package,
-  Banknote,
-  RotateCcw,
-  CheckCircle2,
-  Undo2,
-  FileText,
-  Smartphone,
-} from "lucide-react";
-
-const initialProducts = [
-  { id: 1, name: "Flan vanille", price: 15000, category: "Pâtisserie" },
-  { id: 2, name: "Flan framboise", price: 19000, category: "Pâtisserie" },
-  { id: 3, name: "Flan passion", price: 19000, category: "Pâtisserie" },
-  { id: 4, name: "Cake", price: 10000, category: "Pâtisserie" },
-  { id: 5, name: "Tarte vanille passion", price: 20000, category: "Tarte" },
-  { id: 6, name: "Tarte vanille caramel", price: 20000, category: "Tarte" },
-  { id: 7, name: "Tarte café", price: 20000, category: "Tarte" },
-  { id: 8, name: "Tarte CBS", price: 20000, category: "Tarte" },
-  { id: 9, name: "Tarte vanille", price: 20000, category: "Tarte" },
-  { id: 10, name: "Jus elegance pourpre", price: 10000, category: "Boisson" },
-  { id: 11, name: "Jus eclat fraicheur", price: 10000, category: "Boisson" },
-  { id: 12, name: "Jus energie doree", price: 10000, category: "Boisson" },
-  { id: 13, name: "Jus tropical vitalite", price: 10000, category: "Boisson" },
-];
-
-const formatAr = (value) => `${Number(value || 0).toLocaleString("fr-FR")} Ar`;
-const STORAGE_KEY = "caisse-event-mobile-v3";
-
-const emptyStockMap = () =>
-  initialProducts.reduce((acc, product) => {
-    acc[product.id] = 0;
-    return acc;
-  }, {});
-
-export default function CaisseEventMobile() {
-  const [stocks, setStocks] = useState(emptyStockMap);
-  const [stockInitial, setStockInitial] = useState(emptyStockMap);
-  const [cart, setCart] = useState([]);
-  const [paid, setPaid] = useState(0);
-  const [sales, setSales] = useState([]);
-  const [paymentMethod, setPaymentMethod] = useState("Cash");
-  const [search, setSearch] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("Tous");
-  const [showReport, setShowReport] = useState(false);
-  const [installPrompt, setInstallPrompt] = useState(null);
-
-  const categories = ["Tous", ...new Set(initialProducts.map((p) => p.category))];
-
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (parsed.stocks) setStocks(parsed.stocks);
-        if (parsed.stockInitial) setStockInitial(parsed.stockInitial);
-        if (parsed.cart) setCart(parsed.cart);
-        if (parsed.paid !== undefined) setPaid(parsed.paid);
-        if (parsed.sales) setSales(parsed.sales);
-        if (parsed.paymentMethod) setPaymentMethod(parsed.paymentMethod);
-      }
-    } catch (e) {
-      console.error("Erreur de chargement local", e);
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Encaissement Event</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f1f5f9;
+      color: #0f172a;
     }
-  }, []);
-
-  useEffect(() => {
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({ stocks, stockInitial, cart, paid, sales, paymentMethod })
-    );
-  }, [stocks, stockInitial, cart, paid, sales, paymentMethod]);
-
-  useEffect(() => {
-    const handler = (e) => {
-      e.preventDefault();
-      setInstallPrompt(e);
-    };
-    window.addEventListener("beforeinstallprompt", handler);
-    return () => window.removeEventListener("beforeinstallprompt", handler);
-  }, []);
-
-  const filteredProducts = useMemo(() => {
-    return initialProducts.filter((product) => {
-      const matchSearch = product.name.toLowerCase().includes(search.toLowerCase());
-      const matchCategory = selectedCategory === "Tous" || product.category === selectedCategory;
-      return matchSearch && matchCategory;
-    });
-  }, [search, selectedCategory]);
-
-  const addToCart = (product) => {
-    const alreadyInCart = cart.find((i) => i.id === product.id)?.qty || 0;
-    const stockAvailable = (stocks[product.id] || 0) - alreadyInCart;
-    if (stockAvailable <= 0) return;
-
-    setCart((prev) => {
-      const found = prev.find((item) => item.id === product.id);
-      if (found) {
-        return prev.map((item) =>
-          item.id === product.id ? { ...item, qty: item.qty + 1 } : item
-        );
-      }
-      return [...prev, { ...product, qty: 1 }];
-    });
-  };
-
-  const updateQty = (id, change) => {
-    setCart((prev) =>
-      prev
-        .map((item) => {
-          if (item.id !== id) return item;
-          const maxQty = stocks[id] || 0;
-          const nextQty = Math.max(0, Math.min(maxQty, item.qty + change));
-          return { ...item, qty: nextQty };
-        })
-        .filter((item) => item.qty > 0)
-    );
-  };
-
-  const removeFromCart = (id) => {
-    setCart((prev) => prev.filter((item) => item.id !== id));
-  };
-
-  const total = useMemo(
-    () => cart.reduce((sum, item) => sum + item.price * item.qty, 0),
-    [cart]
-  );
-
-  const change = Math.max(0, Number(paid || 0) - total);
-  const insufficient = Number(paid || 0) < total;
-  const quickCash = [10000, 20000, 30000, 50000, 100000];
-
-  const validateSale = () => {
-    if (!cart.length || insufficient) return;
-
-    const sale = {
-      id: Date.now(),
-      items: cart,
-      total,
-      paid: Number(paid),
-      change,
-      paymentMethod,
-      time: new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }),
-      date: new Date().toLocaleDateString("fr-FR"),
-    };
-
-    setSales((prev) => [sale, ...prev]);
-    setStocks((prev) => {
-      const next = { ...prev };
-      cart.forEach((item) => {
-        next[item.id] = (next[item.id] || 0) - item.qty;
-      });
-      return next;
-    });
-    setCart([]);
-    setPaid(0);
-    setPaymentMethod("Cash");
-  };
-
-  const cancelLastSale = () => {
-    if (!sales.length) return;
-    const lastSale = sales[0];
-
-    setStocks((prev) => {
-      const next = { ...prev };
-      lastSale.items.forEach((item) => {
-        next[item.id] = (next[item.id] || 0) + item.qty;
-      });
-      return next;
-    });
-    setSales((prev) => prev.slice(1));
-  };
-
-  const resetSession = () => {
-    const empty = emptyStockMap();
-    setCart([]);
-    setPaid(0);
-    setSales([]);
-    setStocks(empty);
-    setStockInitial(empty);
-    setPaymentMethod("Cash");
-    localStorage.removeItem(STORAGE_KEY);
-  };
-
-  const installApp = async () => {
-    if (!installPrompt) return;
-    await installPrompt.prompt();
-    setInstallPrompt(null);
-  };
-
-  const totalSold = sales.reduce((sum, sale) => sum + sale.total, 0);
-  const totalReceived = sales.reduce((sum, sale) => sum + sale.paid, 0);
-  const totalChange = sales.reduce((sum, sale) => sum + sale.change, 0);
-
-  const paymentStats = sales.reduce(
-    (acc, sale) => {
-      acc[sale.paymentMethod] = (acc[sale.paymentMethod] || 0) + sale.total;
-      return acc;
-    },
-    { Cash: 0, MVola: 0, "Orange Money": 0 }
-  );
-
-  const soldByProduct = initialProducts.map((product) => {
-    const sold = sales.reduce((sum, sale) => {
-      const found = sale.items.find((item) => item.id === product.id);
-      return sum + (found ? found.qty : 0);
-    }, 0);
-
-    return {
-      ...product,
-      initial: stockInitial[product.id] || 0,
-      final: stocks[product.id] || 0,
-      sold,
-    };
-  });
-
-  return (
-    <div className="min-h-screen bg-slate-100 text-slate-900 p-3 md:p-6">
-      <div className="max-w-7xl mx-auto grid gap-4 lg:grid-cols-3">
-        <div className="lg:col-span-2 space-y-4">
-          <div className="bg-white rounded-3xl shadow-sm p-4">
-            <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
-              <div>
-                <h1 className="text-2xl font-bold">Caisse Event Mobile</h1>
-                <p className="text-sm text-slate-500">Panier multi-produits, sauvegarde locale, stock, annulation et rapport final.</p>
-              </div>
-              <div className="flex gap-2 flex-wrap">
-                <button
-                  onClick={installApp}
-                  className="inline-flex items-center gap-2 rounded-2xl px-3 py-2 bg-emerald-600 text-white text-sm"
-                >
-                  <Smartphone size={16} /> Installer
-                </button>
-                <button
-                  onClick={resetSession}
-                  className="inline-flex items-center gap-2 rounded-2xl px-3 py-2 bg-slate-900 text-white text-sm"
-                >
-                  <RotateCcw size={16} /> Réinitialiser
-                </button>
-              </div>
+    .container {
+      max-width: 1300px;
+      margin: 0 auto;
+      padding: 12px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 16px;
+    }
+    .card {
+      background: #fff;
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 16px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+    h1, h2, h3 {
+      margin-top: 0;
+    }
+    .muted {
+      color: #64748b;
+      font-size: 14px;
+    }
+    .row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .products, .stocks, .sales-list, .report-list {
+      display: grid;
+      gap: 10px;
+    }
+    .products {
+      grid-template-columns: repeat(3, 1fr);
+    }
+    .stocks {
+      grid-template-columns: repeat(3, 1fr);
+    }
+    .product, .stock-item, .sale-item, .report-item, .summary-item {
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 12px;
+      background: #fff;
+    }
+    .product {
+      cursor: pointer;
+      background: #f8fafc;
+    }
+    .product.disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    button, input, select {
+      font: inherit;
+    }
+    button {
+      border: none;
+      border-radius: 10px;
+      padding: 10px 14px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    input, select {
+      width: 100%;
+      border: 1px solid #cbd5e1;
+      border-radius: 10px;
+      padding: 12px;
+      background: white;
+    }
+    .btn-dark { background: #0f172a; color: white; }
+    .btn-green { background: #16a34a; color: white; }
+    .btn-yellow { background: #facc15; color: #0f172a; }
+    .btn-blue { background: #dbeafe; color: #0f172a; }
+    .btn-red { background: #ef4444; color: white; }
+    .qty-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .qty-btn {
+      width: 34px;
+      height: 34px;
+      padding: 0;
+      background: #f1f5f9;
+      color: #0f172a;
+      border: 1px solid #cbd5e1;
+    }
+    .summary-grid {
+      display: grid;
+      gap: 8px;
+    }
+    .summary-item {
+      display: flex;
+      justify-content: space-between;
+    }
+    .change-box {
+      background: #dcfce7;
+      border-radius: 12px;
+      padding: 12px;
+    }
+    .change-value {
+      font-size: 26px;
+      font-weight: bold;
+      color: #15803d;
+    }
+    .danger {
+      color: #dc2626;
+      font-size: 14px;
+      margin-top: 4px;
+    }
+    .top-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .small {
+      font-size: 13px;
+    }
+    @media (max-width: 900px) {
+      .grid { grid-template-columns: 1fr; }
+      .products, .stocks { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 600px) {
+      .products, .stocks { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="grid">
+      <div>
+        <div class="card">
+          <div class="row" style="justify-content:space-between; align-items:flex-start;">
+            <div>
+              <h1>Encaissement Event</h1>
+              <div class="muted">Caisse simple avec stock, panier, validation, total vendu, total rendu et historique.</div>
             </div>
-
-            <div className="grid gap-3 md:grid-cols-2">
-              <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Rechercher un produit"
-                className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none"
-              />
-              <select
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
-                className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none"
-              >
-                {categories.map((cat) => (
-                  <option key={cat} value={cat}>{cat}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-3xl shadow-sm p-4">
-            <div className="flex items-center gap-2 mb-4">
-              <Package size={18} />
-              <h2 className="font-semibold">Stock initial</h2>
-            </div>
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-              {initialProducts.map((product) => (
-                <div key={product.id} className="rounded-2xl border border-slate-200 p-3">
-                  <div className="text-sm font-medium">{product.name}</div>
-                  <div className="text-xs text-slate-500 mb-2">{formatAr(product.price)}</div>
-                  <input
-                    type="number"
-                    min="0"
-                    value={stocks[product.id]}
-                    onChange={(e) => {
-                      const value = Number(e.target.value || 0);
-                      setStocks((prev) => ({ ...prev, [product.id]: value }));
-                      setStockInitial((prev) => ({ ...prev, [product.id]: value }));
-                    }}
-                    className="w-full rounded-xl border border-slate-200 px-3 py-2"
-                    placeholder="Qté"
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="bg-white rounded-3xl shadow-sm p-4">
-            <div className="flex items-center gap-2 mb-4">
-              <ShoppingCart size={18} />
-              <h2 className="font-semibold">Produits</h2>
-            </div>
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-              {filteredProducts.map((product) => {
-                const cartQty = cart.find((i) => i.id === product.id)?.qty || 0;
-                const available = (stocks[product.id] || 0) - cartQty;
-                return (
-                  <button
-                    key={product.id}
-                    onClick={() => addToCart(product)}
-                    disabled={available <= 0}
-                    className={`text-left rounded-2xl p-4 border transition ${
-                      available > 0
-                        ? "border-slate-200 bg-slate-50 active:scale-[0.98]"
-                        : "border-slate-100 bg-slate-100 opacity-50 cursor-not-allowed"
-                    }`}
-                  >
-                    <div className="font-semibold text-sm">{product.name}</div>
-                    <div className="text-sm mt-1">{formatAr(product.price)}</div>
-                    <div className="text-xs text-slate-500 mt-2">Stock dispo: {available}</div>
-                  </button>
-                );
-              })}
+            <div class="top-actions">
+              <button class="btn-green" onclick="resetAll()">Réinitialiser</button>
+              <button class="btn-blue" onclick="toggleReport()">Voir / masquer rapport</button>
             </div>
           </div>
         </div>
 
-        <div className="space-y-4">
-          <div className="bg-white rounded-3xl shadow-sm p-4 sticky top-4">
-            <h2 className="font-semibold mb-4">Panier client</h2>
+        <div class="card">
+          <h2>Stock initial</h2>
+          <div class="stocks" id="stocks"></div>
+        </div>
 
-            <div className="space-y-3 max-h-[300px] overflow-auto pr-1">
-              {cart.length === 0 && (
-                <div className="text-sm text-slate-500 rounded-2xl bg-slate-50 p-4">
-                  Aucun produit ajouté.
-                </div>
-              )}
+        <div class="card">
+          <h2>Produits</h2>
+          <div class="products" id="products"></div>
+        </div>
+      </div>
 
-              {cart.map((item) => (
-                <div key={item.id} className="rounded-2xl border border-slate-200 p-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <div className="text-sm font-medium">{item.name}</div>
-                      <div className="text-xs text-slate-500">{formatAr(item.price)} x {item.qty}</div>
-                    </div>
-                    <button onClick={() => removeFromCart(item.id)} className="text-slate-500">
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                  <div className="mt-3 flex items-center gap-2">
-                    <button onClick={() => updateQty(item.id, -1)} className="rounded-xl border px-3 py-2">
-                      <Minus size={14} />
-                    </button>
-                    <div className="min-w-[40px] text-center font-semibold">{item.qty}</div>
-                    <button onClick={() => updateQty(item.id, 1)} className="rounded-xl border px-3 py-2">
-                      <Plus size={14} />
-                    </button>
-                    <div className="ml-auto font-semibold">{formatAr(item.price * item.qty)}</div>
-                  </div>
-                </div>
-              ))}
+      <div>
+        <div class="card">
+          <h2>Panier client</h2>
+          <div id="cart"></div>
+
+          <div style="margin-top:16px; border-top:1px solid #e2e8f0; padding-top:16px;">
+            <div class="summary-item">
+              <strong>Total panier</strong>
+              <strong id="cartTotal">0 Ar</strong>
             </div>
 
-            <div className="border-t border-slate-200 mt-4 pt-4 space-y-3">
-              <div className="flex items-center justify-between text-lg font-bold">
-                <span>Total</span>
-                <span>{formatAr(total)}</span>
-              </div>
-
-              <div>
-                <label className="text-sm text-slate-600">Moyen de paiement</label>
-                <select
-                  value={paymentMethod}
-                  onChange={(e) => setPaymentMethod(e.target.value)}
-                  className="w-full mt-1 rounded-2xl border border-slate-200 px-4 py-3"
-                >
-                  <option>Cash</option>
-                  <option>MVola</option>
-                  <option>Orange Money</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="text-sm text-slate-600">Montant payé</label>
-                <input
-                  type="number"
-                  min="0"
-                  value={paid}
-                  onChange={(e) => setPaid(Number(e.target.value || 0))}
-                  className="w-full mt-1 rounded-2xl border border-slate-200 px-4 py-3"
-                  placeholder="Ex: 50000"
-                />
-              </div>
-
-              <div className="grid grid-cols-3 gap-2">
-                {quickCash.map((amount) => (
-                  <button
-                    key={amount}
-                    onClick={() => setPaid(amount)}
-                    className="rounded-xl bg-slate-100 px-2 py-2 text-xs font-medium"
-                  >
-                    {amount / 1000}k
-                  </button>
-                ))}
-              </div>
-
-              <div className="rounded-2xl bg-emerald-50 p-4">
-                <div className="text-sm text-slate-600">Rendu</div>
-                <div className="text-2xl font-bold text-emerald-700">{formatAr(change)}</div>
-                {insufficient && total > 0 && (
-                  <div className="text-sm text-red-600 mt-1">Montant insuffisant</div>
-                )}
-              </div>
-
-              <button
-                onClick={validateSale}
-                disabled={!cart.length || insufficient}
-                className={`w-full inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-4 font-semibold ${
-                  !cart.length || insufficient
-                    ? "bg-slate-200 text-slate-500"
-                    : "bg-slate-900 text-white"
-                }`}
-              >
-                <CheckCircle2 size={18} /> Valider la vente
-              </button>
+            <div style="margin-top:12px;">
+              <div class="muted">Moyen de paiement</div>
+              <select id="paymentMethod" onchange="saveState()">
+                <option>Cash</option>
+                <option>MVola</option>
+                <option>Orange Money</option>
+              </select>
             </div>
+
+            <div style="margin-top:12px;">
+              <div class="muted">Montant payé</div>
+              <input id="paid" type="number" min="0" placeholder="Ex: 50000" oninput="render()" />
+            </div>
+
+            <div class="row" style="margin-top:10px;">
+              <button class="btn-blue small" onclick="setPaid(10000)">10k</button>
+              <button class="btn-blue small" onclick="setPaid(20000)">20k</button>
+              <button class="btn-blue small" onclick="setPaid(30000)">30k</button>
+              <button class="btn-blue small" onclick="setPaid(50000)">50k</button>
+              <button class="btn-blue small" onclick="setPaid(100000)">100k</button>
+            </div>
+
+            <div class="change-box" style="margin-top:12px;">
+              <div class="muted">Rendu</div>
+              <div class="change-value" id="changeValue">0 Ar</div>
+              <div id="insufficient" class="danger" style="display:none;">Montant insuffisant</div>
+            </div>
+
+            <button class="btn-dark" style="width:100%; margin-top:12px;" onclick="validateSale()">Valider la vente</button>
+            <button class="btn-yellow" style="width:100%; margin-top:8px;" onclick="cancelLastSale()">Annuler dernière vente</button>
           </div>
+        </div>
 
-          <div className="bg-white rounded-3xl shadow-sm p-4">
-            <div className="grid grid-cols-2 gap-2 mb-3">
-              <button onClick={cancelLastSale} className="rounded-2xl bg-amber-100 px-3 py-3 text-sm font-semibold inline-flex items-center justify-center gap-2">
-                <Undo2 size={16} /> Annuler dernière vente
-              </button>
-              <button onClick={() => setShowReport((v) => !v)} className="rounded-2xl bg-sky-100 px-3 py-3 text-sm font-semibold inline-flex items-center justify-center gap-2">
-                <FileText size={16} /> {showReport ? "Masquer rapport" : "Voir rapport"}
-              </button>
-            </div>
-            <div className="flex items-center gap-2 mb-3">
-              <Banknote size={18} />
-              <h2 className="font-semibold">Résumé caisse</h2>
-            </div>
-            <div className="grid grid-cols-1 gap-3 text-sm">
-              <div className="rounded-2xl bg-slate-50 p-3 flex justify-between"><span>Total ventes</span><span className="font-semibold">{formatAr(totalSold)}</span></div>
-              <div className="rounded-2xl bg-slate-50 p-3 flex justify-between"><span>Total encaissé</span><span className="font-semibold">{formatAr(totalReceived)}</span></div>
-              <div className="rounded-2xl bg-slate-50 p-3 flex justify-between"><span>Total rendu</span><span className="font-semibold">{formatAr(totalChange)}</span></div>
-              <div className="rounded-2xl bg-slate-50 p-3 flex justify-between"><span>Transactions</span><span className="font-semibold">{sales.length}</span></div>
-            </div>
-          </div>
+        <div class="card">
+          <h2>Résumé</h2>
+          <div class="summary-grid" id="summary"></div>
+        </div>
 
-          {showReport && (
-            <div className="bg-white rounded-3xl shadow-sm p-4">
-              <h2 className="font-semibold mb-3">Rapport de fin d’événement</h2>
-              <div className="space-y-3">
-                <div className="rounded-2xl bg-slate-50 p-3 flex justify-between"><span>Cash</span><span className="font-semibold">{formatAr(paymentStats.Cash)}</span></div>
-                <div className="rounded-2xl bg-slate-50 p-3 flex justify-between"><span>MVola</span><span className="font-semibold">{formatAr(paymentStats.MVola)}</span></div>
-                <div className="rounded-2xl bg-slate-50 p-3 flex justify-between"><span>Orange Money</span><span className="font-semibold">{formatAr(paymentStats["Orange Money"])}</span></div>
-                <div className="pt-2">
-                  <h3 className="font-medium mb-2">Stock initial / vendu / final</h3>
-                  <div className="space-y-2 max-h-[280px] overflow-auto pr-1">
-                    {soldByProduct.map((item) => (
-                      <div key={item.id} className="rounded-2xl border border-slate-200 p-3 text-sm">
-                        <div className="font-medium">{item.name}</div>
-                        <div className="text-slate-500">Initial: {item.initial} | Vendu: {item.sold} | Final: {item.final}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
+        <div class="card" id="reportCard" style="display:none;">
+          <h2>Rapport</h2>
+          <div id="reportPayments"></div>
+          <h3 style="margin-top:14px;">Produits</h3>
+          <div id="reportProducts" class="report-list"></div>
+        </div>
 
-          <div className="bg-white rounded-3xl shadow-sm p-4">
-            <h2 className="font-semibold mb-3">Dernières ventes</h2>
-            <div className="space-y-3 max-h-[320px] overflow-auto pr-1">
-              {sales.length === 0 && <div className="text-sm text-slate-500">Aucune vente enregistrée.</div>}
-              {sales.map((sale) => (
-                <div key={sale.id} className="rounded-2xl border border-slate-200 p-3">
-                  <div className="flex justify-between text-sm font-semibold">
-                    <span>{sale.date} {sale.time}</span>
-                    <span>{formatAr(sale.total)}</span>
-                  </div>
-                  <div className="text-xs text-slate-500 mt-1">
-                    {sale.items.map((item) => `${item.name} x${item.qty}`).join(" • ")}
-                  </div>
-                  <div className="text-xs text-slate-500 mt-2">
-                    Paiement: {sale.paymentMethod} | Payé: {formatAr(sale.paid)} | Rendu: {formatAr(sale.change)}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+        <div class="card">
+          <h2>Historique des ventes</h2>
+          <div id="sales" class="sales-list"></div>
         </div>
       </div>
     </div>
-  );
-}
+  </div>
+
+  <script>
+    const PRODUCTS = [
+      { id: 1, name: "Flan vanille", price: 15000, category: "Pâtisserie" },
+      { id: 2, name: "Flan framboise", price: 19000, category: "Pâtisserie" },
+      { id: 3, name: "Flan passion", price: 19000, category: "Pâtisserie" },
+      { id: 4, name: "Cake", price: 10000, category: "Pâtisserie" },
+      { id: 5, name: "Tarte vanille passion", price: 20000, category: "Tarte" },
+      { id: 6, name: "Tarte vanille caramel", price: 20000, category: "Tarte" },
+      { id: 7, name: "Tarte café", price: 20000, category: "Tarte" },
+      { id: 8, name: "Tarte CBS", price: 20000, category: "Tarte" },
+      { id: 9, name: "Tarte vanille", price: 20000, category: "Tarte" },
+      { id: 10, name: "Jus elegance pourpre", price: 10000, category: "Boisson" },
+      { id: 11, name: "Jus eclat fraicheur", price: 10000, category: "Boisson" },
+      { id: 12, name: "Jus energie doree", price: 10000, category: "Boisson" },
+      { id: 13, name: "Jus tropical vitalite", price: 10000, category: "Boisson" }
+    ];
+
+    const STORAGE_KEY = "encaissement_event_simple_v1";
+
+    function formatAr(v) {
+      return Number(v || 0).toLocaleString("fr-FR") + " Ar";
+    }
+
+    function emptyStocks() {
+      const out = {};
+      PRODUCTS.forEach(p => out[p.id] = 0);
+      return out;
+    }
+
+    let state = {
+      stocks: emptyStocks(),
+      stockInitial: emptyStocks(),
+      cart: [],
+      sales: [],
+      reportVisible: false
+    };
+
+    function loadState() {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        try {
+          state = JSON.parse(raw);
+        } catch (e) {}
+      }
+    }
+
+    function saveState() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }
+
+    function updateStock(id, value) {
+      const v = Number(value || 0);
+      state.stocks[id] = v;
+      state.stockInitial[id] = v;
+      saveState();
+      render();
+    }
+
+    function renderStocks() {
+      const el = document.getElementById("stocks");
+      el.innerHTML = PRODUCTS.map(p => `
+        <div class="stock-item">
+          <div><strong>${p.name}</strong></div>
+          <div class="muted">${formatAr(p.price)}</div>
+          <input type="number" min="0" value="${state.stocks[p.id] || 0}" onchange="updateStock(${p.id}, this.value)" />
+        </div>
+      `).join("");
+    }
+
+    function addToCart(id) {
+      const product = PRODUCTS.find(p => p.id === id);
+      const existing = state.cart.find(i => i.id === id);
+      const qtyInCart = existing ? existing.qty : 0;
+      const available = (state.stocks[id] || 0) - qtyInCart;
+
+      if (available <= 0) return;
+
+      if (existing) {
+        existing.qty += 1;
+      } else {
+        state.cart.push({ ...product, qty: 1 });
+      }
+      saveState();
+      render();
+    }
+
+    function changeQty(id, delta) {
+      const item = state.cart.find(i => i.id === id);
+      if (!item) return;
+
+      const maxQty = state.stocks[id] || 0;
+      item.qty = Math.max(0, Math.min(maxQty, item.qty + delta));
+      state.cart = state.cart.filter(i => i.qty > 0);
+
+      saveState();
+      render();
+    }
+
+    function removeFromCart(id) {
+      state.cart = state.cart.filter(i => i.id !== id);
+      saveState();
+      render();
+    }
+
+    function renderProducts() {
+      const el = document.getElementById("products");
+      el.innerHTML = PRODUCTS.map(p => {
+        const cartItem = state.cart.find(i => i.id === p.id);
+        const qtyInCart = cartItem ? cartItem.qty : 0;
+        const available = (state.stocks[p.id] || 0) - qtyInCart;
+        const disabled = available <= 0;
+
+        return `
+          <button class="product ${disabled ? "disabled" : ""}" ${disabled ? "disabled" : ""} onclick="addToCart(${p.id})">
+            <div><strong>${p.name}</strong></div>
+            <div style="margin-top:6px;">${formatAr(p.price)}</div>
+            <div class="muted" style="margin-top:8px;">Stock dispo: ${available}</div>
+          </button>
+        `;
+      }).join("");
+    }
+
+    function cartTotal() {
+      return state.cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+    }
+
+    function cartItemCount() {
+      return state.cart.reduce((sum, item) => sum + item.qty, 0);
+    }
+
+    function totalProductsSold() {
+      return state.sales.reduce((sum, sale) => {
+        return sum + sale.items.reduce((s, item) => s + item.qty, 0);
+      }, 0);
+    }
+
+    function paidValue() {
+      return Number(document.getElementById("paid").value || 0);
+    }
+
+    function setPaid(v) {
+      document.getElementById("paid").value = v;
+      render();
+    }
+
+    function renderCart() {
+      const el = document.getElementById("cart");
+
+      if (!state.cart.length) {
+        el.innerHTML = `<div class="muted">Aucun produit ajouté.</div>`;
+      } else {
+        el.innerHTML = state.cart.map(item => `
+          <div class="sale-item">
+            <div class="row" style="justify-content:space-between;">
+              <div>
+                <div><strong>${item.name}</strong></div>
+                <div class="muted">${formatAr(item.price)} x ${item.qty}</div>
+              </div>
+              <button class="btn-red small" onclick="removeFromCart(${item.id})">Supprimer</button>
+            </div>
+            <div class="qty-controls">
+              <button class="qty-btn" onclick="changeQty(${item.id}, -1)">-</button>
+              <strong>${item.qty}</strong>
+              <button class="qty-btn" onclick="changeQty(${item.id}, 1)">+</button>
+              <strong style="margin-left:auto;">${formatAr(item.price * item.qty)}</strong>
+            </div>
+          </div>
+        `).join("");
+      }
+
+      document.getElementById("cartTotal").textContent = formatAr(cartTotal());
+
+      const change = Math.max(0, paidValue() - cartTotal());
+      document.getElementById("changeValue").textContent = formatAr(change);
+      document.getElementById("insufficient").style.display =
+        paidValue() < cartTotal() && cartTotal() > 0 ? "block" : "none";
+    }
+
+    function validateSale() {
+      const total = cartTotal();
+      const paid = paidValue();
+      const paymentMethod = document.getElementById("paymentMethod").value;
+
+      if (!state.cart.length) {
+        alert("Panier vide");
+        return;
+      }
+
+      if (paid < total) {
+        alert("Montant insuffisant");
+        return;
+      }
+
+      const sale = {
+        id: Date.now(),
+        items: JSON.parse(JSON.stringify(state.cart)),
+        total,
+        paid,
+        change: paid - total,
+        paymentMethod,
+        date: new Date().toLocaleDateString("fr-FR"),
+        time: new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })
+      };
+
+      state.sales.unshift(sale);
+
+      state.cart.forEach(item => {
+        state.stocks[item.id] = (state.stocks[item.id] || 0) - item.qty;
+      });
+
+      state.cart = [];
+      document.getElementById("paid").value = "";
+      document.getElementById("paymentMethod").value = "Cash";
+
+      saveState();
+      render();
+      alert("Vente validée");
+    }
+
+    function cancelLastSale() {
+      if (!state.sales.length) {
+        alert("Aucune vente à annuler");
+        return;
+      }
+
+      const lastSale = state.sales.shift();
+      lastSale.items.forEach(item => {
+        state.stocks[item.id] = (state.stocks[item.id] || 0) + item.qty;
+      });
+
+      saveState();
+      render();
+      alert("Dernière vente annulée");
+    }
+
+    function renderSummary() {
+      const totalSales = state.sales.reduce((sum, sale) => sum + sale.total, 0);
+      const totalReceived = state.sales.reduce((sum, sale) => sum + sale.paid, 0);
+      const totalChange = state.sales.reduce((sum, sale) => sum + sale.change, 0);
+
+      document.getElementById("summary").innerHTML = `
+        <div class="summary-item"><span>Produits dans panier</span><strong>${cartItemCount()}</strong></div>
+        <div class="summary-item"><span>Produits vendus</span><strong>${totalProductsSold()}</strong></div>
+        <div class="summary-item"><span>Total ventes</span><strong>${formatAr(totalSales)}</strong></div>
+        <div class="summary-item"><span>Total encaissé</span><strong>${formatAr(totalReceived)}</strong></div>
+        <div class="summary-item"><span>Total rendu</span><strong>${formatAr(totalChange)}</strong></div>
+        <div class="summary-item"><span>Nombre de ventes</span><strong>${state.sales.length}</strong></div>
+      `;
+    }
+
+    function renderSales() {
+      const el = document.getElementById("sales");
+
+      if (!state.sales.length) {
+        el.innerHTML = `<div class="muted">Aucune vente enregistrée.</div>`;
+        return;
+      }
+
+      el.innerHTML = state.sales.map(sale => `
+        <div class="sale-item">
+          <div class="row" style="justify-content:space-between;">
+            <strong>${sale.date} ${sale.time}</strong>
+            <strong>${formatAr(sale.total)}</strong>
+          </div>
+          <div class="muted" style="margin-top:6px;">
+            ${sale.items.map(item => `${item.name} x${item.qty}`).join(" • ")}
+          </div>
+          <div class="muted" style="margin-top:8px;">
+            Paiement: ${sale.paymentMethod} | Payé: ${formatAr(sale.paid)} | Rendu: ${formatAr(sale.change)}
+          </div>
+        </div>
+      `).join("");
+    }
+
+    function toggleReport() {
+      state.reportVisible = !state.reportVisible;
+      saveState();
+      render();
+    }
+
+    function renderReport() {
+      document.getElementById("reportCard").style.display = state.reportVisible ? "block" : "none";
+
+      const paymentStats = { Cash: 0, MVola: 0, "Orange Money": 0 };
+      state.sales.forEach(sale => {
+        paymentStats[sale.paymentMethod] = (paymentStats[sale.paymentMethod] || 0) + sale.total;
+      });
+
+      document.getElementById("reportPayments").innerHTML = `
+        <div class="summary-item"><span>Cash</span><strong>${formatAr(paymentStats.Cash)}</strong></div>
+        <div class="summary-item"><span>MVola</span><strong>${formatAr(paymentStats.MVola)}</strong></div>
+        <div class="summary-item"><span>Orange Money</span><strong>${formatAr(paymentStats["Orange Money"])}</strong></div>
+      `;
+
+      document.getElementById("reportProducts").innerHTML = PRODUCTS.map(product => {
+        const sold = state.sales.reduce((sum, sale) => {
+          const found = sale.items.find(item => item.id === product.id);
+          return sum + (found ? found.qty : 0);
+        }, 0);
+
+        return `
+          <div class="report-item">
+            <div><strong>${product.name}</strong></div>
+            <div class="muted">Initial: ${state.stockInitial[product.id] || 0} | Vendu: ${sold} | Final: ${state.stocks[product.id] || 0}</div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function resetAll() {
+      if (!confirm("Réinitialiser toute la caisse ?")) return;
+
+      state = {
+        stocks: emptyStocks(),
+        stockInitial: emptyStocks(),
+        cart: [],
+        sales: [],
+        reportVisible: false
+      };
+
+      localStorage.removeItem(STORAGE_KEY);
+      document.getElementById("paid").value = "";
+      document.getElementById("paymentMethod").value = "Cash";
+      render();
+    }
+
+    function render() {
+      renderStocks();
+      renderProducts();
+      renderCart();
+      renderSummary();
+      renderSales();
+      renderReport();
+      saveState();
+    }
+
+    loadState();
+    window.onload = render;
+  </script>
+</body>
+</html>
