@@ -1,4 +1,4 @@
-const CACHE_NAME = "caisse-event-phone-v1";
+const CACHE_NAME = "caisse-event-phone-v2";
 const URLS_TO_CACHE = [
   "./",
   "./index.html",
