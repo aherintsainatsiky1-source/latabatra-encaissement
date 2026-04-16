@@ -140,6 +140,11 @@
       font-size: 14px;
       margin-top: 4px;
     }
+    .success {
+      color: #1b5e20;
+      font-size: 14px;
+      margin-top: 4px;
+    }
     .link-box {
       background: #fff;
       border: 1px dashed #8d6e63;
@@ -345,6 +350,10 @@
     }
 
     async function sendSaleToSheet(sale) {
+      if (!SHEET_WEBHOOK_URL || SHEET_WEBHOOK_URL.includes("COLLE_ICI")) {
+        throw new Error("Webhook non configuré");
+      }
+
       const response = await fetch(SHEET_WEBHOOK_URL, {
         method: "POST",
         headers: { "Content-Type": "text/plain;charset=utf-8" },
