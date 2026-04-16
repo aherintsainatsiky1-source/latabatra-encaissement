@@ -1,105 +1,492 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Caisse Event</title>
+import React, { useEffect, useMemo, useState } from "react";
+import {
+  ShoppingCart,
+  Trash2,
+  Plus,
+  Minus,
+  Package,
+  Banknote,
+  RotateCcw,
+  CheckCircle2,
+  Undo2,
+  FileText,
+  Smartphone,
+} from "lucide-react";
 
-<style>
-body { font-family: Arial; background:#f1f5f9; margin:0; }
-.container { padding:10px; max-width:1200px; margin:auto; }
-.card { background:white; padding:15px; border-radius:10px; margin-bottom:10px; }
-button { padding:10px; border:none; border-radius:8px; cursor:pointer; }
-.btn { background:#0f172a; color:white; }
-.grid { display:grid; grid-template-columns:2fr 1fr; gap:10px; }
-.product { border:1px solid #ddd; padding:10px; border-radius:8px; cursor:pointer; }
-</style>
-
-</head>
-<body>
-
-<div class="container">
-<h1>Caisse Event</h1>
-
-<div class="grid">
-
-<div>
-
-<div class="card">
-<h2>Produits</h2>
-<div id="products"></div>
-</div>
-
-</div>
-
-<div>
-
-<div class="card">
-<h2>Panier</h2>
-<div id="cart"></div>
-<p>Total : <span id="total">0</span> Ar</p>
-
-<input id="paid" placeholder="Montant payé" type="number">
-<p>Rendu : <span id="change">0</span> Ar</p>
-
-<button class="btn" onclick="pay()">Valider</button>
-</div>
-
-</div>
-
-</div>
-</div>
-
-<script>
-
-const products = [
-{name:"Flan vanille", price:15000},
-{name:"Flan framboise", price:19000},
-{name:"Cake", price:10000},
-{name:"Tarte", price:20000},
-{name:"Jus", price:10000}
+const initialProducts = [
+  { id: 1, name: "Flan vanille", price: 15000, category: "Pâtisserie" },
+  { id: 2, name: "Flan framboise", price: 19000, category: "Pâtisserie" },
+  { id: 3, name: "Flan passion", price: 19000, category: "Pâtisserie" },
+  { id: 4, name: "Cake", price: 10000, category: "Pâtisserie" },
+  { id: 5, name: "Tarte vanille passion", price: 20000, category: "Tarte" },
+  { id: 6, name: "Tarte vanille caramel", price: 20000, category: "Tarte" },
+  { id: 7, name: "Tarte café", price: 20000, category: "Tarte" },
+  { id: 8, name: "Tarte CBS", price: 20000, category: "Tarte" },
+  { id: 9, name: "Tarte vanille", price: 20000, category: "Tarte" },
+  { id: 10, name: "Jus elegance pourpre", price: 10000, category: "Boisson" },
+  { id: 11, name: "Jus eclat fraicheur", price: 10000, category: "Boisson" },
+  { id: 12, name: "Jus energie doree", price: 10000, category: "Boisson" },
+  { id: 13, name: "Jus tropical vitalite", price: 10000, category: "Boisson" },
 ];
 
-let cart = [];
+const formatAr = (value) => `${Number(value || 0).toLocaleString("fr-FR")} Ar`;
+const STORAGE_KEY = "caisse-event-mobile-v3";
 
-function renderProducts(){
-let html="";
-products.forEach((p,i)=>{
-html += `<div class="product" onclick="add(${i})">${p.name} - ${p.price} Ar</div>`;
-});
-document.getElementById("products").innerHTML = html;
+const emptyStockMap = () =>
+  initialProducts.reduce((acc, product) => {
+    acc[product.id] = 0;
+    return acc;
+  }, {});
+
+export default function CaisseEventMobile() {
+  const [stocks, setStocks] = useState(emptyStockMap);
+  const [stockInitial, setStockInitial] = useState(emptyStockMap);
+  const [cart, setCart] = useState([]);
+  const [paid, setPaid] = useState(0);
+  const [sales, setSales] = useState([]);
+  const [paymentMethod, setPaymentMethod] = useState("Cash");
+  const [search, setSearch] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("Tous");
+  const [showReport, setShowReport] = useState(false);
+  const [installPrompt, setInstallPrompt] = useState(null);
+
+  const categories = ["Tous", ...new Set(initialProducts.map((p) => p.category))];
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed.stocks) setStocks(parsed.stocks);
+        if (parsed.stockInitial) setStockInitial(parsed.stockInitial);
+        if (parsed.cart) setCart(parsed.cart);
+        if (parsed.paid !== undefined) setPaid(parsed.paid);
+        if (parsed.sales) setSales(parsed.sales);
+        if (parsed.paymentMethod) setPaymentMethod(parsed.paymentMethod);
+      }
+    } catch (e) {
+      console.error("Erreur de chargement local", e);
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ stocks, stockInitial, cart, paid, sales, paymentMethod })
+    );
+  }, [stocks, stockInitial, cart, paid, sales, paymentMethod]);
+
+  useEffect(() => {
+    const handler = (e) => {
+      e.preventDefault();
+      setInstallPrompt(e);
+    };
+    window.addEventListener("beforeinstallprompt", handler);
+    return () => window.removeEventListener("beforeinstallprompt", handler);
+  }, []);
+
+  const filteredProducts = useMemo(() => {
+    return initialProducts.filter((product) => {
+      const matchSearch = product.name.toLowerCase().includes(search.toLowerCase());
+      const matchCategory = selectedCategory === "Tous" || product.category === selectedCategory;
+      return matchSearch && matchCategory;
+    });
+  }, [search, selectedCategory]);
+
+  const addToCart = (product) => {
+    const alreadyInCart = cart.find((i) => i.id === product.id)?.qty || 0;
+    const stockAvailable = (stocks[product.id] || 0) - alreadyInCart;
+    if (stockAvailable <= 0) return;
+
+    setCart((prev) => {
+      const found = prev.find((item) => item.id === product.id);
+      if (found) {
+        return prev.map((item) =>
+          item.id === product.id ? { ...item, qty: item.qty + 1 } : item
+        );
+      }
+      return [...prev, { ...product, qty: 1 }];
+    });
+  };
+
+  const updateQty = (id, change) => {
+    setCart((prev) =>
+      prev
+        .map((item) => {
+          if (item.id !== id) return item;
+          const maxQty = stocks[id] || 0;
+          const nextQty = Math.max(0, Math.min(maxQty, item.qty + change));
+          return { ...item, qty: nextQty };
+        })
+        .filter((item) => item.qty > 0)
+    );
+  };
+
+  const removeFromCart = (id) => {
+    setCart((prev) => prev.filter((item) => item.id !== id));
+  };
+
+  const total = useMemo(
+    () => cart.reduce((sum, item) => sum + item.price * item.qty, 0),
+    [cart]
+  );
+
+  const change = Math.max(0, Number(paid || 0) - total);
+  const insufficient = Number(paid || 0) < total;
+  const quickCash = [10000, 20000, 30000, 50000, 100000];
+
+  const validateSale = () => {
+    if (!cart.length || insufficient) return;
+
+    const sale = {
+      id: Date.now(),
+      items: cart,
+      total,
+      paid: Number(paid),
+      change,
+      paymentMethod,
+      time: new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }),
+      date: new Date().toLocaleDateString("fr-FR"),
+    };
+
+    setSales((prev) => [sale, ...prev]);
+    setStocks((prev) => {
+      const next = { ...prev };
+      cart.forEach((item) => {
+        next[item.id] = (next[item.id] || 0) - item.qty;
+      });
+      return next;
+    });
+    setCart([]);
+    setPaid(0);
+    setPaymentMethod("Cash");
+  };
+
+  const cancelLastSale = () => {
+    if (!sales.length) return;
+    const lastSale = sales[0];
+
+    setStocks((prev) => {
+      const next = { ...prev };
+      lastSale.items.forEach((item) => {
+        next[item.id] = (next[item.id] || 0) + item.qty;
+      });
+      return next;
+    });
+    setSales((prev) => prev.slice(1));
+  };
+
+  const resetSession = () => {
+    const empty = emptyStockMap();
+    setCart([]);
+    setPaid(0);
+    setSales([]);
+    setStocks(empty);
+    setStockInitial(empty);
+    setPaymentMethod("Cash");
+    localStorage.removeItem(STORAGE_KEY);
+  };
+
+  const installApp = async () => {
+    if (!installPrompt) return;
+    await installPrompt.prompt();
+    setInstallPrompt(null);
+  };
+
+  const totalSold = sales.reduce((sum, sale) => sum + sale.total, 0);
+  const totalReceived = sales.reduce((sum, sale) => sum + sale.paid, 0);
+  const totalChange = sales.reduce((sum, sale) => sum + sale.change, 0);
+
+  const paymentStats = sales.reduce(
+    (acc, sale) => {
+      acc[sale.paymentMethod] = (acc[sale.paymentMethod] || 0) + sale.total;
+      return acc;
+    },
+    { Cash: 0, MVola: 0, "Orange Money": 0 }
+  );
+
+  const soldByProduct = initialProducts.map((product) => {
+    const sold = sales.reduce((sum, sale) => {
+      const found = sale.items.find((item) => item.id === product.id);
+      return sum + (found ? found.qty : 0);
+    }, 0);
+
+    return {
+      ...product,
+      initial: stockInitial[product.id] || 0,
+      final: stocks[product.id] || 0,
+      sold,
+    };
+  });
+
+  return (
+    <div className="min-h-screen bg-slate-100 text-slate-900 p-3 md:p-6">
+      <div className="max-w-7xl mx-auto grid gap-4 lg:grid-cols-3">
+        <div className="lg:col-span-2 space-y-4">
+          <div className="bg-white rounded-3xl shadow-sm p-4">
+            <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
+              <div>
+                <h1 className="text-2xl font-bold">Caisse Event Mobile</h1>
+                <p className="text-sm text-slate-500">Panier multi-produits, sauvegarde locale, stock, annulation et rapport final.</p>
+              </div>
+              <div className="flex gap-2 flex-wrap">
+                <button
+                  onClick={installApp}
+                  className="inline-flex items-center gap-2 rounded-2xl px-3 py-2 bg-emerald-600 text-white text-sm"
+                >
+                  <Smartphone size={16} /> Installer
+                </button>
+                <button
+                  onClick={resetSession}
+                  className="inline-flex items-center gap-2 rounded-2xl px-3 py-2 bg-slate-900 text-white text-sm"
+                >
+                  <RotateCcw size={16} /> Réinitialiser
+                </button>
+              </div>
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-2">
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Rechercher un produit"
+                className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none"
+              />
+              <select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none"
+              >
+                {categories.map((cat) => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-3xl shadow-sm p-4">
+            <div className="flex items-center gap-2 mb-4">
+              <Package size={18} />
+              <h2 className="font-semibold">Stock initial</h2>
+            </div>
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+              {initialProducts.map((product) => (
+                <div key={product.id} className="rounded-2xl border border-slate-200 p-3">
+                  <div className="text-sm font-medium">{product.name}</div>
+                  <div className="text-xs text-slate-500 mb-2">{formatAr(product.price)}</div>
+                  <input
+                    type="number"
+                    min="0"
+                    value={stocks[product.id]}
+                    onChange={(e) => {
+                      const value = Number(e.target.value || 0);
+                      setStocks((prev) => ({ ...prev, [product.id]: value }));
+                      setStockInitial((prev) => ({ ...prev, [product.id]: value }));
+                    }}
+                    className="w-full rounded-xl border border-slate-200 px-3 py-2"
+                    placeholder="Qté"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="bg-white rounded-3xl shadow-sm p-4">
+            <div className="flex items-center gap-2 mb-4">
+              <ShoppingCart size={18} />
+              <h2 className="font-semibold">Produits</h2>
+            </div>
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+              {filteredProducts.map((product) => {
+                const cartQty = cart.find((i) => i.id === product.id)?.qty || 0;
+                const available = (stocks[product.id] || 0) - cartQty;
+                return (
+                  <button
+                    key={product.id}
+                    onClick={() => addToCart(product)}
+                    disabled={available <= 0}
+                    className={`text-left rounded-2xl p-4 border transition ${
+                      available > 0
+                        ? "border-slate-200 bg-slate-50 active:scale-[0.98]"
+                        : "border-slate-100 bg-slate-100 opacity-50 cursor-not-allowed"
+                    }`}
+                  >
+                    <div className="font-semibold text-sm">{product.name}</div>
+                    <div className="text-sm mt-1">{formatAr(product.price)}</div>
+                    <div className="text-xs text-slate-500 mt-2">Stock dispo: {available}</div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <div className="bg-white rounded-3xl shadow-sm p-4 sticky top-4">
+            <h2 className="font-semibold mb-4">Panier client</h2>
+
+            <div className="space-y-3 max-h-[300px] overflow-auto pr-1">
+              {cart.length === 0 && (
+                <div className="text-sm text-slate-500 rounded-2xl bg-slate-50 p-4">
+                  Aucun produit ajouté.
+                </div>
+              )}
+
+              {cart.map((item) => (
+                <div key={item.id} className="rounded-2xl border border-slate-200 p-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <div className="text-sm font-medium">{item.name}</div>
+                      <div className="text-xs text-slate-500">{formatAr(item.price)} x {item.qty}</div>
+                    </div>
+                    <button onClick={() => removeFromCart(item.id)} className="text-slate-500">
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                  <div className="mt-3 flex items-center gap-2">
+                    <button onClick={() => updateQty(item.id, -1)} className="rounded-xl border px-3 py-2">
+                      <Minus size={14} />
+                    </button>
+                    <div className="min-w-[40px] text-center font-semibold">{item.qty}</div>
+                    <button onClick={() => updateQty(item.id, 1)} className="rounded-xl border px-3 py-2">
+                      <Plus size={14} />
+                    </button>
+                    <div className="ml-auto font-semibold">{formatAr(item.price * item.qty)}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="border-t border-slate-200 mt-4 pt-4 space-y-3">
+              <div className="flex items-center justify-between text-lg font-bold">
+                <span>Total</span>
+                <span>{formatAr(total)}</span>
+              </div>
+
+              <div>
+                <label className="text-sm text-slate-600">Moyen de paiement</label>
+                <select
+                  value={paymentMethod}
+                  onChange={(e) => setPaymentMethod(e.target.value)}
+                  className="w-full mt-1 rounded-2xl border border-slate-200 px-4 py-3"
+                >
+                  <option>Cash</option>
+                  <option>MVola</option>
+                  <option>Orange Money</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="text-sm text-slate-600">Montant payé</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={paid}
+                  onChange={(e) => setPaid(Number(e.target.value || 0))}
+                  className="w-full mt-1 rounded-2xl border border-slate-200 px-4 py-3"
+                  placeholder="Ex: 50000"
+                />
+              </div>
+
+              <div className="grid grid-cols-3 gap-2">
+                {quickCash.map((amount) => (
+                  <button
+                    key={amount}
+                    onClick={() => setPaid(amount)}
+                    className="rounded-xl bg-slate-100 px-2 py-2 text-xs font-medium"
+                  >
+                    {amount / 1000}k
+                  </button>
+                ))}
+              </div>
+
+              <div className="rounded-2xl bg-emerald-50 p-4">
+                <div className="text-sm text-slate-600">Rendu</div>
+                <div className="text-2xl font-bold text-emerald-700">{formatAr(change)}</div>
+                {insufficient && total > 0 && (
+                  <div className="text-sm text-red-600 mt-1">Montant insuffisant</div>
+                )}
+              </div>
+
+              <button
+                onClick={validateSale}
+                disabled={!cart.length || insufficient}
+                className={`w-full inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-4 font-semibold ${
+                  !cart.length || insufficient
+                    ? "bg-slate-200 text-slate-500"
+                    : "bg-slate-900 text-white"
+                }`}
+              >
+                <CheckCircle2 size={18} /> Valider la vente
+              </button>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-3xl shadow-sm p-4">
+            <div className="grid grid-cols-2 gap-2 mb-3">
+              <button onClick={cancelLastSale} className="rounded-2xl bg-amber-100 px-3 py-3 text-sm font-semibold inline-flex items-center justify-center gap-2">
+                <Undo2 size={16} /> Annuler dernière vente
+              </button>
+              <button onClick={() => setShowReport((v) => !v)} className="rounded-2xl bg-sky-100 px-3 py-3 text-sm font-semibold inline-flex items-center justify-center gap-2">
+                <FileText size={16} /> {showReport ? "Masquer rapport" : "Voir rapport"}
+              </button>
+            </div>
+            <div className="flex items-center gap-2 mb-3">
+              <Banknote size={18} />
+              <h2 className="font-semibold">Résumé caisse</h2>
+            </div>
+            <div className="grid grid-cols-1 gap-3 text-sm">
+              <div className="rounded-2xl bg-slate-50 p-3 flex justify-between"><span>Total ventes</span><span className="font-semibold">{formatAr(totalSold)}</span></div>
+              <div className="rounded-2xl bg-slate-50 p-3 flex justify-between"><span>Total encaissé</span><span className="font-semibold">{formatAr(totalReceived)}</span></div>
+              <div className="rounded-2xl bg-slate-50 p-3 flex justify-between"><span>Total rendu</span><span className="font-semibold">{formatAr(totalChange)}</span></div>
+              <div className="rounded-2xl bg-slate-50 p-3 flex justify-between"><span>Transactions</span><span className="font-semibold">{sales.length}</span></div>
+            </div>
+          </div>
+
+          {showReport && (
+            <div className="bg-white rounded-3xl shadow-sm p-4">
+              <h2 className="font-semibold mb-3">Rapport de fin d’événement</h2>
+              <div className="space-y-3">
+                <div className="rounded-2xl bg-slate-50 p-3 flex justify-between"><span>Cash</span><span className="font-semibold">{formatAr(paymentStats.Cash)}</span></div>
+                <div className="rounded-2xl bg-slate-50 p-3 flex justify-between"><span>MVola</span><span className="font-semibold">{formatAr(paymentStats.MVola)}</span></div>
+                <div className="rounded-2xl bg-slate-50 p-3 flex justify-between"><span>Orange Money</span><span className="font-semibold">{formatAr(paymentStats["Orange Money"])}</span></div>
+                <div className="pt-2">
+                  <h3 className="font-medium mb-2">Stock initial / vendu / final</h3>
+                  <div className="space-y-2 max-h-[280px] overflow-auto pr-1">
+                    {soldByProduct.map((item) => (
+                      <div key={item.id} className="rounded-2xl border border-slate-200 p-3 text-sm">
+                        <div className="font-medium">{item.name}</div>
+                        <div className="text-slate-500">Initial: {item.initial} | Vendu: {item.sold} | Final: {item.final}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="bg-white rounded-3xl shadow-sm p-4">
+            <h2 className="font-semibold mb-3">Dernières ventes</h2>
+            <div className="space-y-3 max-h-[320px] overflow-auto pr-1">
+              {sales.length === 0 && <div className="text-sm text-slate-500">Aucune vente enregistrée.</div>}
+              {sales.map((sale) => (
+                <div key={sale.id} className="rounded-2xl border border-slate-200 p-3">
+                  <div className="flex justify-between text-sm font-semibold">
+                    <span>{sale.date} {sale.time}</span>
+                    <span>{formatAr(sale.total)}</span>
+                  </div>
+                  <div className="text-xs text-slate-500 mt-1">
+                    {sale.items.map((item) => `${item.name} x${item.qty}`).join(" • ")}
+                  </div>
+                  <div className="text-xs text-slate-500 mt-2">
+                    Paiement: {sale.paymentMethod} | Payé: {formatAr(sale.paid)} | Rendu: {formatAr(sale.change)}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
-
-function add(i){
-cart.push(products[i]);
-renderCart();
-}
-
-function renderCart(){
-let total=0;
-let html="";
-cart.forEach(p=>{
-total += p.price;
-html += `<div>${p.name} - ${p.price}</div>`;
-});
-document.getElementById("cart").innerHTML = html;
-document.getElementById("total").innerText = total;
-
-let paid = document.getElementById("paid").value || 0;
-document.getElementById("change").innerText = paid - total;
-}
-
-function pay(){
-alert("Vente validée");
-cart=[];
-renderCart();
-}
-
-document.getElementById("paid").addEventListener("input", renderCart);
-
-renderProducts();
-
-</script>
-
-</body>
-</html>
