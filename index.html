@@ -3,205 +3,361 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Caisse Event</title>
-  <meta name="theme-color" content="#4e342e" />
+  <title>Caisse Event Premium</title>
+  <meta name="theme-color" content="#3b2418" />
   <link rel="manifest" href="manifest.json" />
   <style>
     * { box-sizing: border-box; }
     body {
       margin: 0;
       font-family: Arial, sans-serif;
-      background: #f5efe6;
-      color: #2b211d;
+      background: #f6efe7;
+      color: #2f1d14;
     }
-    .container {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 12px;
+
+    .hero {
+      background:
+        linear-gradient(rgba(39, 23, 16, 0.72), rgba(39, 23, 16, 0.72)),
+        url('https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=1400&q=80') center/cover no-repeat;
+      color: #fff8f0;
+      padding: 28px 18px 36px;
+      border-bottom-left-radius: 28px;
+      border-bottom-right-radius: 28px;
+      box-shadow: 0 8px 18px rgba(59, 36, 24, 0.18);
     }
-    .topbar {
-      display: flex;
-      justify-content: space-between;
-      gap: 10px;
-      align-items: flex-start;
-      flex-wrap: wrap;
-      margin-bottom: 12px;
-    }
-    .title {
-      font-size: 28px;
-      font-weight: bold;
-      color: #3e2723;
-    }
-    .muted {
-      color: #6d4c41;
-      font-size: 14px;
-    }
-    .grid {
-      display: grid;
-      grid-template-columns: 1.6fr 1fr;
-      gap: 14px;
-    }
-    .card {
-      background: #fffaf3;
-      border: 1px solid #d7ccc8;
-      border-radius: 16px;
-      padding: 14px;
-      margin-bottom: 14px;
-      box-shadow: 0 2px 8px rgba(62,39,35,0.08);
-    }
-    h1, h2, h3 { margin-top: 0; }
-    .products, .stocks, .sales-list, .report-list, .summary-grid {
-      display: grid;
-      gap: 10px;
-    }
-    .products, .stocks {
-      grid-template-columns: repeat(2, 1fr);
-    }
-    .product, .stock-item, .sale-item, .report-item, .summary-item {
-      border: 1px solid #d7ccc8;
-      border-radius: 12px;
-      padding: 12px;
-      background: #fff;
-    }
-    .product {
-      background: #efebe9;
-      cursor: pointer;
-      text-align: left;
-    }
-    .product.disabled {
-      opacity: 0.45;
-      cursor: not-allowed;
-    }
-    .summary-item {
+
+    .hero-top {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      background: #f8f2ea;
+      gap: 10px;
+      flex-wrap: wrap;
     }
+
+    .brand {
+      font-size: 28px;
+      font-weight: bold;
+      letter-spacing: 0.5px;
+    }
+
+    .tagline {
+      color: #ead7c3;
+      margin-top: 8px;
+      font-size: 14px;
+      max-width: 600px;
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .container {
+      max-width: 1250px;
+      margin: 0 auto;
+      padding: 14px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1.5fr 1fr;
+      gap: 16px;
+      margin-top: 14px;
+    }
+
+    .card {
+      background: #fffaf4;
+      border: 1px solid #dbc7b4;
+      border-radius: 18px;
+      padding: 16px;
+      margin-bottom: 16px;
+      box-shadow: 0 3px 10px rgba(59, 36, 24, 0.06);
+    }
+
+    h1, h2, h3 {
+      margin-top: 0;
+      color: #3b2418;
+    }
+
+    .muted {
+      color: #7b5b4a;
+      font-size: 14px;
+    }
+
     .row {
       display: flex;
       gap: 8px;
       flex-wrap: wrap;
       align-items: center;
     }
-    input, select, button {
+
+    .products, .stocks, .sales-list, .report-list, .summary-grid {
+      display: grid;
+      gap: 12px;
+    }
+
+    .products {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .stocks {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .product, .stock-item, .sale-item, .report-item, .summary-item {
+      background: #fff;
+      border: 1px solid #e3d3c5;
+      border-radius: 14px;
+      padding: 12px;
+    }
+
+    .product {
+      cursor: pointer;
+      background: linear-gradient(180deg, #f7efe7, #efe1d5);
+      transition: transform 0.12s ease, box-shadow 0.12s ease;
+      text-align: left;
+    }
+
+    .product:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 14px rgba(59, 36, 24, 0.08);
+    }
+
+    .product.disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .product-name {
+      font-weight: bold;
+      font-size: 16px;
+      color: #3b2418;
+    }
+
+    .product-price {
+      margin-top: 6px;
+      font-size: 15px;
+      color: #5b3827;
+      font-weight: bold;
+    }
+
+    .summary-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #f8efe6;
+    }
+
+    button, input, select {
       font: inherit;
     }
+
     input, select {
       width: 100%;
       padding: 12px;
-      border: 1px solid #bcaaa4;
       border-radius: 10px;
+      border: 1px solid #cdb39f;
       background: #fff;
-      color: #2b211d;
+      color: #2f1d14;
     }
+
     button {
       border: none;
-      border-radius: 10px;
+      border-radius: 12px;
       padding: 12px 14px;
       cursor: pointer;
       font-weight: bold;
     }
-    .btn-dark { background: #3e2723; color: white; }
-    .btn-brown { background: #6d4c41; color: white; }
-    .btn-light { background: #d7ccc8; color: #2b211d; }
-    .btn-beige { background: #efebe9; color: #2b211d; }
-    .btn-red { background: #8d6e63; color: white; }
-    .qty-line {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-top: 10px;
+
+    .btn-dark {
+      background: #3b2418;
+      color: white;
     }
-    .qty-line button {
-      width: 42px;
-      height: 42px;
-      padding: 0;
-      font-size: 18px;
+
+    .btn-brown {
+      background: #7b4b34;
+      color: white;
     }
-    .qty-box {
-      min-width: 36px;
-      text-align: center;
-      font-weight: bold;
+
+    .btn-light {
+      background: #e6d3c2;
+      color: #2f1d14;
     }
+
+    .btn-soft {
+      background: #f2e6db;
+      color: #2f1d14;
+    }
+
+    .btn-red {
+      background: #9a5f45;
+      color: white;
+    }
+
     .money-box {
-      background: #ede0d4;
-      border-radius: 12px;
+      background: #efe1d5;
+      border-radius: 14px;
       padding: 12px;
       margin-top: 12px;
     }
+
     .money-value {
       font-size: 28px;
       font-weight: bold;
-      color: #4e342e;
+      color: #4b2f20;
     }
+
     .danger {
-      color: #b71c1c;
+      color: #b3261e;
       font-size: 14px;
       margin-top: 4px;
     }
+
     .success {
-      color: #1b5e20;
+      color: #1d6b3d;
       font-size: 14px;
       margin-top: 4px;
     }
+
     .link-box {
       background: #fff;
-      border: 1px dashed #8d6e63;
+      border: 1px dashed #9f7d67;
       border-radius: 12px;
       padding: 12px;
+      margin-top: 10px;
     }
+
     .link-box a {
-      color: #4e342e;
+      color: #5e3a28;
       word-break: break-all;
     }
-    @media (max-width: 900px) {
-      .grid { grid-template-columns: 1fr; }
+
+    .cart-empty {
+      color: #7b5b4a;
+      font-size: 14px;
+      padding: 6px 0;
     }
-    @media (max-width: 600px) {
-      .products, .stocks { grid-template-columns: 1fr; }
-      .title { font-size: 24px; }
+
+    .cart-line-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      align-items: flex-start;
+    }
+
+    .qty-area {
+      display: grid;
+      grid-template-columns: 44px 1fr 44px 92px auto;
+      gap: 8px;
+      align-items: center;
+      margin-top: 10px;
+    }
+
+    .qty-btn {
+      width: 44px;
+      height: 44px;
+      padding: 0;
+      font-size: 20px;
+      background: #e8d8ca;
+      color: #2f1d14;
+    }
+
+    .qty-display {
+      text-align: center;
+      font-weight: bold;
+      font-size: 16px;
+    }
+
+    .big-stat {
+      font-size: 18px;
+      font-weight: bold;
+      color: #3b2418;
+    }
+
+    .section-sub {
+      color: #7b5b4a;
+      font-size: 13px;
+      margin-top: -4px;
+      margin-bottom: 10px;
+    }
+
+    @media (max-width: 900px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 700px) {
+      .products, .stocks {
+        grid-template-columns: 1fr;
+      }
+
+      .brand {
+        font-size: 24px;
+      }
+
+      .qty-area {
+        grid-template-columns: 40px 1fr 40px;
+      }
+
+      .qty-area input {
+        grid-column: 1 / -1;
+      }
+
+      .qty-area .line-total {
+        grid-column: 1 / -1;
+        text-align: right;
+      }
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <div class="topbar">
-      <div>
-        <div class="title">Caisse Event</div>
-        <div class="muted">Version téléphone avec Google Sheet, sauvegarde locale et file d’attente hors ligne.</div>
-      </div>
-      <div class="row">
-        <button class="btn-brown" onclick="installApp()">Installer</button>
-        <button class="btn-dark" onclick="resetAll()">Réinitialiser</button>
+  <div class="hero">
+    <div class="container">
+      <div class="hero-top">
+        <div>
+          <div class="brand">Caisse Event Premium</div>
+          <div class="tagline">Encaissement simple, élégant, rapide. Beige, marron, noir. Téléphone, hors ligne, synchronisation Google Sheet.</div>
+        </div>
+        <div class="hero-actions">
+          <button class="btn-brown" onclick="installApp()">Installer</button>
+          <button class="btn-dark" onclick="resetAll()">Réinitialiser</button>
+        </div>
       </div>
     </div>
+  </div>
 
+  <div class="container">
     <div class="card">
       <h2>Vue globale des ventes</h2>
-      <div class="muted">Lien du Google Sheet de consultation.</div>
+      <div class="muted">Lien du Google Sheet de suivi global.</div>
       <div class="row" style="margin-top:10px;">
         <div style="flex:1;">
           <input id="driveLink" type="url" placeholder="https://docs.google.com/..." oninput="saveDriveLink()" />
         </div>
         <button class="btn-brown" onclick="openDriveLink()">Ouvrir</button>
       </div>
-      <div class="link-box" style="margin-top:10px;">
+      <div class="link-box">
         <div class="muted">Lien enregistré :</div>
         <a id="driveLinkView" href="#" target="_blank" rel="noopener noreferrer">Aucun lien enregistré</a>
       </div>
-      <div id="syncStatus" class="muted" style="margin-top:10px;"></div>
+      <div id="syncStatus" class="muted"></div>
     </div>
 
     <div class="grid">
       <div>
         <div class="card">
           <h2>Stock initial</h2>
+          <div class="section-sub">Saisir le stock du jour avant de vendre. Oui, sinon le stock ne va pas s’inventer.</div>
           <div class="stocks" id="stocks"></div>
         </div>
 
         <div class="card">
           <h2>Produits</h2>
+          <div class="section-sub">Appuyer sur une carte pour ajouter rapidement au panier.</div>
           <div class="products" id="products"></div>
         </div>
       </div>
@@ -211,7 +367,7 @@
           <h2>Panier client</h2>
           <div id="cart"></div>
 
-          <div style="border-top:1px solid #d7ccc8; margin-top:14px; padding-top:14px;">
+          <div style="border-top:1px solid #dbc7b4; margin-top:14px; padding-top:14px;">
             <div class="summary-item">
               <span>Total panier</span>
               <strong id="cartTotal">0 Ar</strong>
@@ -245,7 +401,7 @@
             </div>
 
             <button class="btn-dark" style="width:100%; margin-top:12px;" onclick="validateSale()">Valider la vente</button>
-            <button class="btn-beige" style="width:100%; margin-top:8px;" onclick="cancelLastSale()">Annuler dernière vente</button>
+            <button class="btn-soft" style="width:100%; margin-top:8px;" onclick="cancelLastSale()">Annuler dernière vente</button>
           </div>
         </div>
 
@@ -286,11 +442,11 @@
       { id: 13, name: "Jus tropical vitalite", price: 10000 }
     ];
 
-    const STORAGE_KEY = "caisse_event_google_sheet_v1";
-    const DRIVE_KEY = "caisse_event_drive_link_v1";
-    const QUEUE_KEY = "caisse_event_sync_queue_v1";
+    const STORAGE_KEY = "caisse_event_google_sheet_v2";
+    const DRIVE_KEY = "caisse_event_drive_link_v2";
+    const QUEUE_KEY = "caisse_event_sync_queue_v2";
 
-    const SHEET_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbz9R2YS6zS_C6coH_L8RRuclXthfelxAu-h6u4ZFGUaZhM68xeERbRxVM67wJEyETFM4w/exec";
+    const SHEET_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbwJ84mUbgaol70Cs5ZAHIGzqdfSZyhNZfgfoiqFzu2sqHzK_dwqHnkxkDmhE-8VF4R2Jg/exec";
 
     let deferredPrompt = null;
 
@@ -343,17 +499,17 @@
       const queue = getQueue();
       const el = document.getElementById("syncStatus");
       if (!navigator.onLine) {
-        el.textContent = "Hors ligne. Les ventes seront envoyées plus tard. En attente : " + queue.length;
+        el.innerHTML = '<span class="danger">Hors ligne. Ventes en attente : ' + queue.length + '</span>';
         return;
       }
-      el.textContent = "En ligne. Ventes en attente : " + queue.length;
+      if (queue.length > 0) {
+        el.innerHTML = '<span class="muted">En ligne. Ventes en attente : ' + queue.length + '</span>';
+      } else {
+        el.innerHTML = '<span class="success">Synchronisation OK. Aucune vente en attente.</span>';
+      }
     }
 
     async function sendSaleToSheet(sale) {
-      if (!SHEET_WEBHOOK_URL || SHEET_WEBHOOK_URL.includes("COLLE_ICI")) {
-        throw new Error("Webhook non configuré");
-      }
-
       const response = await fetch(SHEET_WEBHOOK_URL, {
         method: "POST",
         headers: { "Content-Type": "text/plain;charset=utf-8" },
@@ -382,7 +538,6 @@
       }
 
       const remaining = [];
-
       for (const sale of queue) {
         try {
           await sendSaleToSheet(sale);
@@ -500,10 +655,9 @@
 
         return `
           <button class="product ${disabled ? "disabled" : ""}" ${disabled ? "disabled" : ""} onclick="addToCart(${p.id})">
-            <div><strong>${p.name}</strong></div>
-            <div style="margin-top:6px;">${formatAr(p.price)}</div>
+            <div class="product-name">${p.name}</div>
+            <div class="product-price">${formatAr(p.price)}</div>
             <div class="muted" style="margin-top:8px;">Stock dispo : ${available}</div>
-            <div class="muted">Appuyer pour ajouter</div>
           </button>
         `;
       }).join("");
@@ -536,11 +690,11 @@
       const el = document.getElementById("cart");
 
       if (!state.cart.length) {
-        el.innerHTML = `<div class="muted">Aucun produit dans le panier.</div>`;
+        el.innerHTML = `<div class="cart-empty">Aucun produit dans le panier.</div>`;
       } else {
         el.innerHTML = state.cart.map(item => `
           <div class="sale-item">
-            <div class="row" style="justify-content:space-between;">
+            <div class="cart-line-top">
               <div>
                 <div><strong>${item.name}</strong></div>
                 <div class="muted">${formatAr(item.price)} x ${item.qty}</div>
@@ -548,12 +702,12 @@
               <button class="btn-red" onclick="removeFromCart(${item.id})">X</button>
             </div>
 
-            <div class="qty-line">
-              <button class="btn-light" onclick="changeQty(${item.id}, -1)">-</button>
-              <div class="qty-box">${item.qty}</div>
-              <button class="btn-light" onclick="changeQty(${item.id}, 1)">+</button>
-              <input type="number" min="1" max="${state.stocks[item.id] || 0}" value="${item.qty}" onchange="setQty(${item.id}, this.value)" style="max-width:90px;" />
-              <strong style="margin-left:auto;">${formatAr(item.price * item.qty)}</strong>
+            <div class="qty-area">
+              <button class="qty-btn" onclick="changeQty(${item.id}, -1)">-</button>
+              <div class="qty-display">${item.qty}</div>
+              <button class="qty-btn" onclick="changeQty(${item.id}, 1)">+</button>
+              <input type="number" min="1" max="${state.stocks[item.id] || 0}" value="${item.qty}" onchange="setQty(${item.id}, this.value)" />
+              <strong class="line-total">${formatAr(item.price * item.qty)}</strong>
             </div>
           </div>
         `).join("");
@@ -634,8 +788,8 @@
       const totalChange = state.sales.reduce((sum, sale) => sum + sale.change, 0);
 
       document.getElementById("summary").innerHTML = `
-        <div class="summary-item"><span>Produits dans panier</span><strong>${cartItemCount()}</strong></div>
-        <div class="summary-item"><span>Produits vendus</span><strong>${totalProductsSold()}</strong></div>
+        <div class="summary-item"><span>Produits dans panier</span><strong class="big-stat">${cartItemCount()}</strong></div>
+        <div class="summary-item"><span>Produits vendus</span><strong class="big-stat">${totalProductsSold()}</strong></div>
         <div class="summary-item"><span>Total ventes</span><strong>${formatAr(totalSales)}</strong></div>
         <div class="summary-item"><span>Total encaissé</span><strong>${formatAr(totalReceived)}</strong></div>
         <div class="summary-item"><span>Total rendu</span><strong>${formatAr(totalChange)}</strong></div>
@@ -647,7 +801,7 @@
       const el = document.getElementById("sales");
 
       if (!state.sales.length) {
-        el.innerHTML = `<div class="muted">Aucune vente enregistrée.</div>`;
+        el.innerHTML = `<div class="cart-empty">Aucune vente enregistrée.</div>`;
         return;
       }
 
