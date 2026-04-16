@@ -1,0 +1,10 @@
+{
+  "name": "Caisse Event",
+  "short_name": "Caisse",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f5efe6",
+  "theme_color": "#4e342e",
+  "description": "Caisse simple pour event",
+  "icons": []
+}
