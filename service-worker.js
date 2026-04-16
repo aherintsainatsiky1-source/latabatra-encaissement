@@ -1,4 +1,4 @@
-const CACHE_NAME = "caisse-event-premium-v8";
+const CACHE_NAME = "caisse-event-premium-v10";
 
 const URLS_TO_CACHE = [
   "./",

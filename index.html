@@ -323,6 +323,34 @@
       min-height: var(--tap);
       font-size: 16px;
     }
+    .stock-item__head {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+    .stock-item__name {
+      flex: 1;
+      min-width: 0;
+      font-weight: 700;
+    }
+    .stock-item__price-row {
+      margin: 6px 0 4px;
+    }
+    .stock-item__price {
+      margin-top: 4px;
+    }
+    .new-product-row {
+      display: grid;
+      grid-template-columns: 1fr 120px auto;
+      gap: 10px;
+      align-items: end;
+    }
+    @media (max-width: 520px) {
+      .new-product-row {
+        grid-template-columns: 1fr;
+      }
+    }
 
     .summary-item {
       display: flex;
@@ -510,6 +538,104 @@
     }
     .cta-stack button {
       width: 100%;
+    }
+
+    body.modal-open {
+      overflow: hidden;
+      touch-action: none;
+    }
+
+    .app-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 200;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
+        max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+    }
+    .app-modal[hidden] {
+      display: none !important;
+    }
+    .app-modal__backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(28, 22, 18, 0.5);
+      -webkit-backdrop-filter: blur(4px);
+      backdrop-filter: blur(4px);
+    }
+    .app-modal__panel {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 400px;
+      max-height: min(88dvh, 560px);
+      overflow: auto;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 20px 20px 18px;
+      box-shadow: 0 16px 48px rgba(0, 0, 0, 0.2);
+    }
+    .app-modal__title {
+      margin: 0 0 10px;
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: var(--brand);
+      line-height: 1.25;
+    }
+    .app-modal__message {
+      margin: 0 0 18px;
+      font-size: 15px;
+      line-height: 1.45;
+      color: var(--text);
+      white-space: pre-wrap;
+    }
+    .app-modal__actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: flex-end;
+    }
+    .app-modal__actions button {
+      min-width: 108px;
+    }
+
+    .app-toast {
+      position: fixed;
+      left: 50%;
+      transform: translateX(-50%);
+      bottom: max(24px, calc(env(safe-area-inset-bottom) + 20px));
+      z-index: 190;
+      max-width: min(420px, calc(100vw - 32px));
+      padding: 14px 18px;
+      background: var(--brand);
+      color: #fff8f0;
+      font-weight: 700;
+      font-size: 14px;
+      line-height: 1.35;
+      border-radius: var(--radius-md);
+      box-shadow: 0 8px 28px rgba(0, 0, 0, 0.25);
+      text-align: center;
+    }
+    .app-toast[hidden] {
+      display: none !important;
+    }
+    @media (max-width: 900px) {
+      .app-toast {
+        bottom: max(24px, calc(var(--tab-h) + env(safe-area-inset-bottom) + 12px));
+      }
+    }
+
+    .catalog-row-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .catalog-row-actions button {
+      min-height: 44px;
     }
 
     button:focus-visible,
@@ -810,8 +936,8 @@
                     <div id="insufficient" class="danger" style="display:none;">Montant insuffisant</div>
                   </div>
                   <div class="cta-stack">
-                    <button type="button" class="btn-dark" onclick="validateSale()">Valider la vente</button>
-                    <button type="button" class="btn-soft" onclick="cancelLastSale()">Annuler dernière vente</button>
+                    <button type="button" class="btn-dark" onclick="void validateSale()">Valider la vente</button>
+                    <button type="button" class="btn-soft" onclick="void cancelLastSale()">Annuler dernière vente</button>
                   </div>
                 </div>
               </div>
@@ -823,7 +949,25 @@
       <div id="panel-stock" class="panel">
         <div class="container">
           <div class="card">
-            <h2>Stock</h2>
+            <h2>Nouveau produit</h2>
+            <p class="muted" style="margin:0 0 12px; font-size:13px;">Ajoute un article au catalogue (prix en Ariary, stock à 0 au départ).</p>
+            <div class="new-product-row">
+              <div>
+                <div class="muted" style="margin-bottom:6px;">Nom</div>
+                <input type="text" id="newProductName" maxlength="120" placeholder="Ex. Tarte citron" autocomplete="off" />
+              </div>
+              <div>
+                <div class="muted" style="margin-bottom:6px;">Prix (Ar)</div>
+                <input type="number" id="newProductPrice" min="0" step="1" placeholder="0" />
+              </div>
+              <button type="button" class="btn-brown" onclick="void addProductFromForm()">Ajouter</button>
+            </div>
+          </div>
+          <div class="card">
+            <h2>Catalogue &amp; stock</h2>
+            <p class="muted" style="margin:0 0 12px; font-size:13px;">
+              Modifie les champs puis clique <strong>Enregistrer</strong> pour appliquer (évite les erreurs de saisie). La suppression demande une confirmation.
+            </p>
             <div class="stocks" id="stocks"></div>
           </div>
         </div>
@@ -846,14 +990,14 @@
               <strong>Importer</strong> : <span class="text-danger">remplace tout</span> (stocks, ventes, panier). Sélectionne en une fois les <strong>3 CSV</strong> de l’export, ou uniquement le CSV stock pour réinitialiser les ventes.
             </p>
             <div class="donnees-actions">
-              <button type="button" class="btn-brown" onclick="exportData()">Exporter (CSV)</button>
+              <button type="button" class="btn-brown" onclick="void exportData()">Exporter (CSV)</button>
               <button type="button" class="btn-light" onclick="document.getElementById('importFile').click()">Importer</button>
             </div>
             <input type="file" id="importFile" accept=".csv,text/csv" multiple hidden />
           </div>
           <div class="card">
             <h2>Réinitialiser</h2>
-            <button type="button" class="btn-dark" style="width:100%;min-height:var(--tap);" onclick="resetAll()">Tout effacer</button>
+            <button type="button" class="btn-dark" style="width:100%;min-height:var(--tap);" onclick="void resetAll()">Tout effacer</button>
           </div>
         </div>
       </div>
@@ -880,7 +1024,7 @@
   </div>
 
   <script>
-    const PRODUCTS = [
+    const DEFAULT_PRODUCTS = [
       { id: 1, name: "Flan vanille", price: 15000 },
       { id: 2, name: "Flan framboise", price: 19000 },
       { id: 3, name: "Flan passion", price: 19000 },
@@ -893,8 +1037,12 @@
       { id: 10, name: "Jus elegance pourpre", price: 10000 },
       { id: 11, name: "Jus eclat fraicheur", price: 10000 },
       { id: 12, name: "Jus energie doree", price: 10000 },
-      { id: 13, name: "Jus tropical vitalite", price: 10000 }
+      { id: 13, name: "Jus tropical vitalite", price: 10000 },
+      { id: 14, name: "Tarte vanille cacahuète", price: 20000 }
     ];
+
+    /** Anciennes installs sans id 14 : ajout unique (voir ensureCatalogAddonOnce) */
+    const LS_CATALOG_ADDON_V14 = "caisse_catalog_addon_v14_cacahuete";
 
     const STORAGE_KEY = "caisse_event_data_v4";
     const LEGACY_STORAGE_KEYS = ["caisse_event_google_sheet_v3", "caisse_event_google_sheet_v2"];
@@ -904,6 +1052,77 @@
       venteHead: "ventes_entete.csv",
       venteLines: "ventes_lignes.csv"
     };
+
+    function escapeHtml(s) {
+      return String(s || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    function cloneDefaultProducts() {
+      return DEFAULT_PRODUCTS.map((p) => ({ ...p }));
+    }
+
+    function sanitizeProducts(arr) {
+      const raw = Array.isArray(arr) ? arr : [];
+      const out = [];
+      const seen = new Set();
+      for (const p of raw) {
+        const id = Math.round(Number(p.id));
+        if (!Number.isFinite(id) || id <= 0 || seen.has(id)) continue;
+        seen.add(id);
+        out.push({
+          id,
+          name: String(p.name || "").trim() || "Sans nom",
+          price: Math.max(0, Math.round(Number(p.price) || 0))
+        });
+      }
+      out.sort((a, b) => a.id - b.id);
+      return out.length ? out : cloneDefaultProducts();
+    }
+
+    function reconcileStocksForProducts(products, stocksObj, initialObj) {
+      const stocks = {};
+      const stockInitial = {};
+      products.forEach((p) => {
+        const id = p.id;
+        stocks[id] = Math.max(0, Math.round(Number(stocksObj[id]) || 0));
+        const ini =
+          initialObj[id] !== undefined && initialObj[id] !== null && initialObj[id] !== ""
+            ? initialObj[id]
+            : stocksObj[id];
+        stockInitial[id] = Math.max(0, Math.round(Number(ini) || 0));
+      });
+      return { stocks, stockInitial };
+    }
+
+    function normalizeLoadedState(o) {
+      const oSafe = o && typeof o === "object" ? o : {};
+      const products = sanitizeProducts(oSafe.products);
+      const { stocks, stockInitial } = reconcileStocksForProducts(
+        products,
+        oSafe.stocks || {},
+        oSafe.stockInitial || {}
+      );
+      const cart = Array.isArray(oSafe.cart)
+        ? oSafe.cart
+            .filter((i) => products.some((p) => p.id === i.id))
+            .map((i) => {
+              const p = products.find((x) => x.id === i.id);
+              return {
+                id: i.id,
+                name: p ? p.name : String(i.name || ""),
+                price: p ? p.price : Math.max(0, Number(i.price) || 0),
+                qty: Math.max(0, Math.round(Number(i.qty) || 0))
+              };
+            })
+            .filter((i) => i.qty > 0)
+        : [];
+      const sales = Array.isArray(oSafe.sales) ? oSafe.sales : [];
+      return { products, stocks, stockInitial, cart, sales };
+    }
 
     function parseIntFr(s) {
       if (s == null || s === "") return 0;
@@ -973,7 +1192,7 @@
 
     function buildStocksCSV() {
       const headers = ["id_produit", "nom", "prix_ariary", "stock_initial", "stock_actuel"];
-      const rows = PRODUCTS.map((p) => ({
+      const rows = state.products.map((p) => ({
         id_produit: p.id,
         nom: p.name,
         prix_ariary: p.price,
@@ -1062,15 +1281,40 @@
       }
 
       const stockParsed = parseCSVText(maps[stockKey]);
-      const stocks = { ...emptyStocks() };
-      const stockInitial = { ...emptyStocks() };
-      const knownIds = new Set(PRODUCTS.map((p) => p.id));
+      const productMap = new Map();
+      const stocks = {};
+      const stockInitial = {};
 
       for (const row of stockParsed.rows) {
         const id = parseIntFr(row.id_produit != null ? row.id_produit : row["id produit"]);
-        if (!knownIds.has(id)) continue;
+        if (id <= 0) continue;
+        const nom = String(row.nom != null ? row.nom : row.name != null ? row.name : "").trim();
+        const prix = parseIntFr(
+          row.prix_ariary != null ? row.prix_ariary : row.prix != null ? row.prix : 0
+        );
+        if (!productMap.has(id)) {
+          productMap.set(id, {
+            id,
+            name: nom || "Produit " + id,
+            price: prix > 0 ? prix : 0
+          });
+        }
         stockInitial[id] = parseIntFr(row.stock_initial);
         stocks[id] = parseIntFr(row.stock_actuel != null ? row.stock_actuel : row["stock actuel"]);
+      }
+
+      let products = Array.from(productMap.values()).sort((a, b) => a.id - b.id);
+      if (!products.length) {
+        products = cloneDefaultProducts();
+        products.forEach((p) => {
+          if (stocks[p.id] === undefined) stocks[p.id] = 0;
+          if (stockInitial[p.id] === undefined) stockInitial[p.id] = 0;
+        });
+      } else {
+        products.forEach((p) => {
+          if (stocks[p.id] === undefined) stocks[p.id] = 0;
+          if (stockInitial[p.id] === undefined) stockInitial[p.id] = stocks[p.id] || 0;
+        });
       }
 
       const sales = [];
@@ -1085,12 +1329,13 @@
         const heads = parseCSVText(maps[headKey]);
         const lines = parseCSVText(maps[linesKey]);
         const bySale = {};
+        const prodById = new Map(products.map((p) => [p.id, p]));
         for (const r of lines.rows) {
           const sid = String(r.id_vente != null ? r.id_vente : "").trim();
           if (!sid) continue;
           if (!bySale[sid]) bySale[sid] = [];
           const pid = parseIntFr(r.id_produit);
-          const prod = PRODUCTS.find((p) => p.id === pid);
+          const prod = prodById.get(pid);
           bySale[sid].push({
             id: pid,
             name: (r.nom_produit || (prod && prod.name) || "").trim() || (prod ? prod.name : "?"),
@@ -1117,7 +1362,7 @@
         }
       }
 
-      return normalizeLoadedState({ stocks, stockInitial, cart: [], sales });
+      return normalizeLoadedState({ products, stocks, stockInitial, cart: [], sales });
     }
 
     function tryImportFromCsvFiles(fileList) {
@@ -1144,18 +1389,104 @@
       return Number(v || 0).toLocaleString("fr-FR") + " Ar";
     }
 
-    function emptyStocks() {
-      const out = {};
-      PRODUCTS.forEach((p) => (out[p.id] = 0));
-      return out;
+    let modalResolver = null;
+    let toastTimer = null;
+
+    function closeAppModal(result) {
+      const root = document.getElementById("appModal");
+      if (root) {
+        root.hidden = true;
+        root.setAttribute("aria-hidden", "true");
+      }
+      document.body.classList.remove("modal-open");
+      const fn = modalResolver;
+      modalResolver = null;
+      if (fn) fn(result);
     }
 
-    let state = {
-      stocks: emptyStocks(),
-      stockInitial: emptyStocks(),
-      cart: [],
-      sales: []
-    };
+    function showAppModal(opts) {
+      const title = opts.title || "Confirmation";
+      const message = opts.message || "";
+      const showCancel = opts.showCancel === true;
+      const danger = !!opts.danger;
+      const okText = opts.okText || (showCancel ? "Confirmer" : "OK");
+
+      return new Promise((resolve) => {
+        modalResolver = resolve;
+        const root = document.getElementById("appModal");
+        const t = document.getElementById("appModalTitle");
+        const m = document.getElementById("appModalMessage");
+        const ok = document.getElementById("appModalOk");
+        const ca = document.getElementById("appModalCancel");
+        if (!root || !t || !m || !ok || !ca) {
+          resolve(showCancel ? false : true);
+          return;
+        }
+        t.textContent = title;
+        m.textContent = message;
+        ca.hidden = !showCancel;
+        ca.style.display = showCancel ? "" : "none";
+        ok.textContent = okText;
+        ok.className = danger ? "btn-red" : "btn-dark";
+        root.hidden = false;
+        root.setAttribute("aria-hidden", "false");
+        document.body.classList.add("modal-open");
+        setTimeout(() => ok.focus(), 30);
+      });
+    }
+
+    function alertModal(message, title) {
+      return showAppModal({ title: title || "Information", message, showCancel: false, danger: false, okText: "OK" });
+    }
+
+    function confirmModal(title, message, danger) {
+      return showAppModal({ title, message, showCancel: true, danger: !!danger, okText: "Confirmer" });
+    }
+
+    function showToast(msg, ms) {
+      const el = document.getElementById("appToast");
+      if (!el) return;
+      el.textContent = msg;
+      el.hidden = false;
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => {
+        el.hidden = true;
+      }, ms || 2600);
+    }
+
+    function initAppModal() {
+      const bd = document.getElementById("appModalBackdrop");
+      const ca = document.getElementById("appModalCancel");
+      const ok = document.getElementById("appModalOk");
+      if (bd) bd.addEventListener("click", () => closeAppModal(false));
+      if (ca) ca.addEventListener("click", () => closeAppModal(false));
+      if (ok) ok.addEventListener("click", () => closeAppModal(true));
+      document.addEventListener("keydown", (e) => {
+        const root = document.getElementById("appModal");
+        if (e.key === "Escape" && root && !root.hidden) {
+          e.preventDefault();
+          closeAppModal(false);
+        }
+      });
+    }
+
+    let state = normalizeLoadedState({});
+
+    function ensureCatalogAddonOnce() {
+      try {
+        if (localStorage.getItem(LS_CATALOG_ADDON_V14)) return;
+        const have = new Set(state.products.map((p) => p.id));
+        const def = DEFAULT_PRODUCTS.find((p) => p.id === 14);
+        if (def && !have.has(14)) {
+          state.products.push({ ...def });
+          state.stocks[14] = 0;
+          state.stockInitial[14] = 0;
+          state.products.sort((a, b) => a.id - b.id);
+          saveState();
+        }
+        localStorage.setItem(LS_CATALOG_ADDON_V14, "1");
+      } catch (e) {}
+    }
 
     const PANEL_TITLES = {
       dashboard: "Dashboard",
@@ -1179,16 +1510,6 @@
       const head = document.getElementById("mobileHeaderPanelTitle");
       if (head && PANEL_TITLES[name]) head.textContent = PANEL_TITLES[name];
       window.scrollTo(0, 0);
-    }
-
-    function normalizeLoadedState(o) {
-      const base = emptyStocks();
-      return {
-        stocks: { ...base, ...(o.stocks || {}) },
-        stockInitial: { ...base, ...(o.stockInitial || {}) },
-        cart: Array.isArray(o.cart) ? o.cart : [],
-        sales: Array.isArray(o.sales) ? o.sales : []
-      };
     }
 
     function loadState() {
@@ -1223,22 +1544,28 @@
       URL.revokeObjectURL(a.href);
     }
 
-    function exportData() {
+    async function exportData() {
+      const ok = await confirmModal(
+        "Exporter en CSV ?",
+        "Trois fichiers vont être téléchargés (produits / stock, ventes, lignes de vente). Vérifie que ton navigateur autorise les téléchargements multiples.",
+        false
+      );
+      if (!ok) return;
       const stamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
       const prefix = "caisse-latabatra-" + stamp + "-";
       downloadTextFile(prefix + CSV_EXPORT_NAMES.stock, buildStocksCSV());
       setTimeout(() => downloadTextFile(prefix + CSV_EXPORT_NAMES.venteHead, buildVentesEnteteCSV()), 280);
       setTimeout(() => downloadTextFile(prefix + CSV_EXPORT_NAMES.venteLines, buildVentesLignesCSV()), 560);
+      showToast("Export lancé — vérifie tes téléchargements.");
     }
 
-    function applyImportedState(trial) {
-      if (
-        !confirm(
-          "L’import remplace toutes les données sur cet appareil (stocks, ventes, panier). Continuer ?"
-        )
-      ) {
-        return;
-      }
+    async function applyImportedState(trial) {
+      const ok = await confirmModal(
+        "Importer ces fichiers ?",
+        "Tout sera remplacé sur cet appareil : catalogue, stocks, ventes et panier. Cette action ne peut pas être annulée ici.",
+        true
+      );
+      if (!ok) return;
       state = trial;
       saveState();
       const paid = document.getElementById("paid");
@@ -1247,7 +1574,96 @@
       if (pm) pm.value = "Cash";
       render();
       setActivePanel("dashboard");
-      alert("Import terminé.");
+      showToast("Import terminé.");
+    }
+
+    function nextProductId() {
+      const ids = state.products.map((p) => p.id);
+      return (ids.length ? Math.max(...ids) : 0) + 1;
+    }
+
+    async function addProductFromForm() {
+      const nameEl = document.getElementById("newProductName");
+      const priceEl = document.getElementById("newProductPrice");
+      const name = nameEl ? String(nameEl.value || "").trim() : "";
+      const price = priceEl ? Math.max(0, Math.round(Number(priceEl.value) || 0)) : 0;
+      if (!name) {
+        await alertModal("Indique un nom de produit.", "Nom manquant");
+        return;
+      }
+      if (price <= 0) {
+        const ok = await confirmModal(
+          "Prix à zéro ?",
+          "Le produit sera gratuit au ticket. Confirmer ?",
+          true
+        );
+        if (!ok) return;
+      }
+      const id = nextProductId();
+      state.products.push({ id, name, price });
+      state.products.sort((a, b) => a.id - b.id);
+      state.stocks[id] = 0;
+      state.stockInitial[id] = 0;
+      if (nameEl) nameEl.value = "";
+      if (priceEl) priceEl.value = "";
+      saveState();
+      render();
+      showToast("Produit ajouté au catalogue.");
+    }
+
+    async function removeProduct(id) {
+      if (state.products.length <= 1) {
+        await alertModal(
+          "Il doit rester au moins un produit. Utilise « Tout effacer » dans Données pour repartir des valeurs par défaut.",
+          "Suppression impossible"
+        );
+        return;
+      }
+      const p = state.products.find((x) => x.id === id);
+      const ok = await confirmModal(
+        "Supprimer ce produit ?",
+        (p ? `« ${p.name} »` : "Ce produit") +
+          " sera retiré du catalogue et du panier. Les ventes déjà enregistrées restent dans l’historique.",
+        true
+      );
+      if (!ok) return;
+      state.products = state.products.filter((x) => x.id !== id);
+      delete state.stocks[id];
+      delete state.stockInitial[id];
+      state.cart = state.cart.filter((i) => i.id !== id);
+      saveState();
+      render();
+      showToast("Produit supprimé.");
+    }
+
+    function saveCatalogRow(id) {
+      const nEl = document.getElementById("catalog-name-" + id);
+      const pEl = document.getElementById("catalog-price-" + id);
+      const sEl = document.getElementById("catalog-stock-" + id);
+      const name = nEl ? String(nEl.value || "").trim() : "";
+      const price = pEl ? Math.max(0, Math.round(Number(pEl.value) || 0)) : 0;
+      const stock = sEl ? Math.max(0, Math.round(Number(sEl.value) || 0)) : 0;
+      if (!name) {
+        void alertModal("Le nom ne peut pas être vide.", "Erreur");
+        return;
+      }
+      const p = state.products.find((x) => x.id === id);
+      if (!p) return;
+      p.name = name;
+      p.price = price;
+      state.stocks[id] = stock;
+      state.stockInitial[id] = stock;
+      state.cart.forEach((i) => {
+        if (i.id === id) {
+          i.name = name;
+          i.price = price;
+          if (i.qty > stock) i.qty = stock;
+        }
+      });
+      state.cart = state.cart.filter((i) => i.qty > 0);
+      saveState();
+      render();
+      showToast("Modifications enregistrées.");
     }
 
     function importFromFile(ev) {
@@ -1262,13 +1678,13 @@
 
       if (files.length > 1 && allCsv) {
         tryImportFromCsvFiles(files)
-          .then(applyImportedState)
-          .catch((err) => alert(err.message || "Import CSV impossible."));
+          .then((trial) => applyImportedState(trial))
+          .catch((err) => void alertModal(err.message || "Import CSV impossible.", "Erreur"));
         return;
       }
 
       if (files.length > 1) {
-        alert("Sélectionnez uniquement des fichiers .csv (export de l’app), en une fois.");
+        void alertModal("Sélectionne uniquement des fichiers .csv (export de l’app), en une fois.", "Fichiers");
         return;
       }
 
@@ -1277,20 +1693,12 @@
 
       if (name.endsWith(".csv")) {
         tryImportFromCsvFiles(files)
-          .then(applyImportedState)
-          .catch((err) => alert(err.message || "Import CSV impossible."));
+          .then((trial) => applyImportedState(trial))
+          .catch((err) => void alertModal(err.message || "Import CSV impossible.", "Erreur"));
         return;
       }
 
-      alert("Format non reconnu. Utilisez uniquement des fichiers .csv.");
-    }
-
-    function updateStock(id, value) {
-      const v = Number(value || 0);
-      state.stocks[id] = v;
-      state.stockInitial[id] = v;
-      saveState();
-      render();
+      void alertModal("Format non reconnu. Utilise uniquement des fichiers .csv.", "Import");
     }
 
     function renderPosSummary() {
@@ -1306,18 +1714,29 @@
     function renderStocks() {
       const el = document.getElementById("stocks");
       if (!el) return;
-      el.innerHTML = PRODUCTS.map(
-        (p) => `
+      el.innerHTML = state.products
+        .map(
+          (p) => `
         <div class="stock-item">
-          <div><strong>${p.name}</strong></div>
-          <div class="muted">${formatAr(p.price)}</div>
-          <input type="number" min="0" value="${state.stocks[p.id] || 0}" onchange="updateStock(${p.id}, this.value)" />
+          <div class="stock-item__head">
+            <input type="text" id="catalog-name-${p.id}" class="stock-item__name" value="${escapeHtml(p.name)}" maxlength="120" autocomplete="off" />
+            <button type="button" class="btn-red cart-remove" aria-label="Supprimer le produit" onclick="void removeProduct(${p.id})">×</button>
+          </div>
+          <div class="muted stock-item__price-row">Prix (Ar)</div>
+          <input type="number" id="catalog-price-${p.id}" class="stock-item__price" min="0" step="1" value="${p.price}" inputmode="numeric" />
+          <div class="muted" style="margin-top:8px;">Stock</div>
+          <input type="number" id="catalog-stock-${p.id}" min="0" step="1" value="${state.stocks[p.id] || 0}" inputmode="numeric" />
+          <div class="catalog-row-actions">
+            <button type="button" class="btn-dark" onclick="saveCatalogRow(${p.id})">Enregistrer</button>
+          </div>
         </div>`
-      ).join("");
+        )
+        .join("");
     }
 
     function addToCart(id) {
-      const product = PRODUCTS.find((p) => p.id === id);
+      const product = state.products.find((p) => p.id === id);
+      if (!product) return;
       const existing = state.cart.find((i) => i.id === id);
       const qtyInCart = existing ? existing.qty : 0;
       const available = (state.stocks[id] || 0) - qtyInCart;
@@ -1357,14 +1776,18 @@
     function renderProducts() {
       const el = document.getElementById("products");
       if (!el) return;
-      el.innerHTML = PRODUCTS.map((p) => {
+      if (!state.products.length) {
+        el.innerHTML = `<div class="cart-empty">Aucun produit — ajoutez-en dans l’onglet Stock.</div>`;
+        return;
+      }
+      el.innerHTML = state.products.map((p) => {
         const item = state.cart.find((i) => i.id === p.id);
         const inCart = item ? item.qty : 0;
         const available = (state.stocks[p.id] || 0) - inCart;
         const disabled = available <= 0;
         return `
           <button type="button" class="product ${disabled ? "disabled" : ""}" ${disabled ? "disabled" : ""} onclick="addToCart(${p.id})">
-            <div class="product-name">${p.name}</div>
+            <div class="product-name">${escapeHtml(p.name)}</div>
             <div class="product-price">${formatAr(p.price)}</div>
             <div class="muted muted-stock">Dispo : ${available}</div>
           </button>`;
@@ -1409,7 +1832,7 @@
           <div class="sale-item">
             <div class="cart-line-top">
               <div>
-                <div><strong>${item.name}</strong></div>
+                <div><strong>${escapeHtml(item.name)}</strong></div>
                 <div class="muted">${formatAr(item.price)} × ${item.qty}</div>
               </div>
               <button type="button" class="btn-red cart-remove" aria-label="Retirer du panier" onclick="removeFromCart(${item.id})">×</button>
@@ -1437,20 +1860,31 @@
       }
     }
 
-    function validateSale() {
+    async function validateSale() {
       const total = cartTotal();
       const paid = paidValue();
       const pmEl = document.getElementById("paymentMethod");
       const paymentMethod = pmEl ? pmEl.value : "Cash";
 
       if (!state.cart.length) {
-        alert("Panier vide");
+        await alertModal("Ajoute au moins un produit au panier avant de valider.", "Panier vide");
         return;
       }
       if (paid < total) {
-        alert("Montant insuffisant");
+        await alertModal(
+          `Montant reçu insuffisant.\nTotal à payer : ${formatAr(total)}\nReçu : ${formatAr(paid)}`,
+          "Paiement incomplet"
+        );
         return;
       }
+
+      const lines = state.cart.map((i) => `${i.name} × ${i.qty}  (${formatAr(i.price * i.qty)})`).join("\n");
+      const ok = await confirmModal(
+        "Confirmer la vente ?",
+        `Total : ${formatAr(total)}\nReçu : ${formatAr(paid)} (${paymentMethod})\nRendu : ${formatAr(paid - total)}\n\n— Détail —\n${lines}`,
+        false
+      );
+      if (!ok) return;
 
       const sale = {
         id: Date.now().toString(),
@@ -1473,21 +1907,28 @@
       if (pmEl) pmEl.value = "Cash";
       saveState();
       render();
-      alert("Vente validée");
+      showToast("Vente enregistrée.");
     }
 
-    function cancelLastSale() {
+    async function cancelLastSale() {
       if (!state.sales.length) {
-        alert("Aucune vente à annuler");
+        await alertModal("Il n’y a aucune vente à annuler.", "Historique");
         return;
       }
+      const last = state.sales[0];
+      const ok = await confirmModal(
+        "Annuler la dernière vente ?",
+        `La vente du ${last.date} à ${last.time} (${formatAr(last.total)}) sera annulée et les quantités seront remises en stock.`,
+        true
+      );
+      if (!ok) return;
       const lastSale = state.sales.shift();
       lastSale.items.forEach((item) => {
         state.stocks[item.id] = (state.stocks[item.id] || 0) + item.qty;
       });
       saveState();
       render();
-      alert("Dernière vente annulée");
+      showToast("Dernière vente annulée — stock mis à jour.");
     }
 
     function renderSummary() {
@@ -1522,7 +1963,7 @@
             <strong>${formatAr(sale.total)}</strong>
           </div>
           <div class="muted" style="margin-top:6px;">
-            ${sale.items.map((item) => `${item.name} ×${item.qty}`).join(" · ")}
+            ${sale.items.map((item) => `${escapeHtml(item.name)} ×${item.qty}`).join(" · ")}
           </div>
           <div class="muted" style="margin-top:8px;">
             ${sale.paymentMethod} · ${formatAr(sale.paid)} · rendu ${formatAr(sale.change)}
@@ -1547,27 +1988,27 @@
         <div class="summary-item"><span>Orange Money</span><strong>${formatAr(paymentStats["Orange Money"])}</strong></div>
       `;
 
-      prodEl.innerHTML = PRODUCTS.map((product) => {
+      prodEl.innerHTML = state.products.map((product) => {
         const sold = state.sales.reduce((sum, sale) => {
           const found = sale.items.find((item) => item.id === product.id);
           return sum + (found ? found.qty : 0);
         }, 0);
         return `
           <div class="report-item">
-            <div><strong>${product.name}</strong></div>
+            <div><strong>${escapeHtml(product.name)}</strong></div>
             <div class="muted">Init. ${state.stockInitial[product.id] || 0} · vendu ${sold} · reste ${state.stocks[product.id] || 0}</div>
           </div>`;
       }).join("");
     }
 
-    function resetAll() {
-      if (!confirm("Tout effacer sur cet appareil ?")) return;
-      state = {
-        stocks: emptyStocks(),
-        stockInitial: emptyStocks(),
-        cart: [],
-        sales: []
-      };
+    async function resetAll() {
+      const ok = await confirmModal(
+        "Tout effacer ?",
+        "Toutes les données sur cet appareil seront supprimées : catalogue, stocks, ventes et panier. Pense à exporter un CSV avant si tu veux une copie.",
+        true
+      );
+      if (!ok) return;
+      state = normalizeLoadedState({ cart: [], sales: [] });
       localStorage.removeItem(STORAGE_KEY);
       const paid = document.getElementById("paid");
       const pm = document.getElementById("paymentMethod");
@@ -1646,6 +2087,7 @@
     }
 
     function render() {
+      ensureCatalogAddonOnce();
       renderPosSummary();
       renderStocks();
       renderProducts();
@@ -1658,6 +2100,7 @@
 
     loadState();
     window.onload = () => {
+      initAppModal();
       setActivePanel("dashboard");
       ["caisse_event_drive_link_v2", "caisse_event_sheet_dirty_v1", "caisse_event_sync_queue_v2"].forEach((k) => {
         try {
@@ -1671,5 +2114,18 @@
       updateInstallUI();
     };
   </script>
+
+  <div id="appModal" class="app-modal" hidden aria-hidden="true" role="alertdialog" aria-modal="true" aria-labelledby="appModalTitle">
+    <div class="app-modal__backdrop" id="appModalBackdrop"></div>
+    <div class="app-modal__panel">
+      <h2 id="appModalTitle" class="app-modal__title"></h2>
+      <p id="appModalMessage" class="app-modal__message"></p>
+      <div class="app-modal__actions">
+        <button type="button" class="btn-soft" id="appModalCancel">Annuler</button>
+        <button type="button" class="btn-dark" id="appModalOk">OK</button>
+      </div>
+    </div>
+  </div>
+  <div id="appToast" class="app-toast" hidden role="status" aria-live="polite"></div>
 </body>
 </html>
