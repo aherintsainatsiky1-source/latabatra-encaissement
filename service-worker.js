@@ -1,4 +1,4 @@
-const CACHE_NAME = "caisse-event-premium-v3";
+const CACHE_NAME = "caisse-event-premium-v4";;
 const URLS_TO_CACHE = [
   "./",
   "./index.html",
