@@ -54,10 +54,7 @@
       display: grid;
       gap: 10px;
     }
-    .products {
-      grid-template-columns: repeat(2, 1fr);
-    }
-    .stocks {
+    .products, .stocks {
       grid-template-columns: repeat(2, 1fr);
     }
     .product, .stock-item, .sale-item, .report-item, .summary-item {
@@ -154,17 +151,11 @@
       word-break: break-all;
     }
     @media (max-width: 900px) {
-      .grid {
-        grid-template-columns: 1fr;
-      }
+      .grid { grid-template-columns: 1fr; }
     }
     @media (max-width: 600px) {
-      .products, .stocks {
-        grid-template-columns: 1fr;
-      }
-      .title {
-        font-size: 24px;
-      }
+      .products, .stocks { grid-template-columns: 1fr; }
+      .title { font-size: 24px; }
     }
   </style>
 </head>
@@ -173,7 +164,7 @@
     <div class="topbar">
       <div>
         <div class="title">Caisse Event</div>
-        <div class="muted">Simple, téléphone, beige / marron / noir, avec mode hors ligne après premier chargement.</div>
+        <div class="muted">Version téléphone avec Google Sheet, sauvegarde locale et file d’attente hors ligne.</div>
       </div>
       <div class="row">
         <button class="btn-brown" onclick="installApp()">Installer</button>
@@ -182,8 +173,8 @@
     </div>
 
     <div class="card">
-      <h2>Lien vue globale des ventes</h2>
-      <div class="muted">Colle ici le lien Google Drive ou Google Sheets pour consultation rapide.</div>
+      <h2>Vue globale des ventes</h2>
+      <div class="muted">Lien du Google Sheet de consultation.</div>
       <div class="row" style="margin-top:10px;">
         <div style="flex:1;">
           <input id="driveLink" type="url" placeholder="https://docs.google.com/..." oninput="saveDriveLink()" />
@@ -194,6 +185,7 @@
         <div class="muted">Lien enregistré :</div>
         <a id="driveLinkView" href="#" target="_blank" rel="noopener noreferrer">Aucun lien enregistré</a>
       </div>
+      <div id="syncStatus" class="muted" style="margin-top:10px;"></div>
     </div>
 
     <div class="grid">
@@ -257,7 +249,7 @@
           <div class="summary-grid" id="summary"></div>
         </div>
 
-        <div class="card" id="reportCard">
+        <div class="card">
           <h2>Vue globale</h2>
           <div id="reportPayments"></div>
           <h3 style="margin-top:14px;">Produits</h3>
@@ -289,8 +281,12 @@
       { id: 13, name: "Jus tropical vitalite", price: 10000 }
     ];
 
-    const STORAGE_KEY = "caisse_event_phone_v2";
+    const STORAGE_KEY = "caisse_event_google_sheet_v1";
     const DRIVE_KEY = "caisse_event_drive_link_v1";
+    const QUEUE_KEY = "caisse_event_sync_queue_v1";
+
+    const SHEET_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbz9R2YS6zS_C6coH_L8RRuclXthfelxAu-h6u4ZFGUaZhM68xeERbRxVM67wJEyETFM4w/exec";
+
     let deferredPrompt = null;
 
     function formatAr(v) {
@@ -319,6 +315,74 @@
 
     function saveState() {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }
+
+    function getQueue() {
+      const raw = localStorage.getItem(QUEUE_KEY);
+      if (!raw) return [];
+      try { return JSON.parse(raw); } catch(e) { return []; }
+    }
+
+    function setQueue(queue) {
+      localStorage.setItem(QUEUE_KEY, JSON.stringify(queue));
+      updateSyncStatus();
+    }
+
+    function enqueueSale(sale) {
+      const queue = getQueue();
+      queue.push(sale);
+      setQueue(queue);
+    }
+
+    function updateSyncStatus() {
+      const queue = getQueue();
+      const el = document.getElementById("syncStatus");
+      if (!navigator.onLine) {
+        el.textContent = "Hors ligne. Les ventes seront envoyées plus tard. En attente : " + queue.length;
+        return;
+      }
+      el.textContent = "En ligne. Ventes en attente : " + queue.length;
+    }
+
+    async function sendSaleToSheet(sale) {
+      const response = await fetch(SHEET_WEBHOOK_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify(sale)
+      });
+
+      const text = await response.text();
+      let data = {};
+      try { data = JSON.parse(text); } catch(e) {}
+
+      if (!response.ok || data.ok === false) {
+        throw new Error("Erreur envoi Google Sheet");
+      }
+    }
+
+    async function flushQueue() {
+      if (!navigator.onLine) {
+        updateSyncStatus();
+        return;
+      }
+
+      let queue = getQueue();
+      if (!queue.length) {
+        updateSyncStatus();
+        return;
+      }
+
+      const remaining = [];
+
+      for (const sale of queue) {
+        try {
+          await sendSaleToSheet(sale);
+        } catch (e) {
+          remaining.push(sale);
+        }
+      }
+
+      setQueue(remaining);
     }
 
     function loadDriveLink() {
@@ -494,7 +558,7 @@
         (paidValue() < cartTotal() && cartTotal() > 0) ? "block" : "none";
     }
 
-    function validateSale() {
+    async function validateSale() {
       const total = cartTotal();
       const paid = paidValue();
       const paymentMethod = document.getElementById("paymentMethod").value;
@@ -510,7 +574,7 @@
       }
 
       const sale = {
-        id: Date.now(),
+        id: Date.now().toString(),
         items: JSON.parse(JSON.stringify(state.cart)),
         total: total,
         paid: paid,
@@ -532,6 +596,10 @@
 
       saveState();
       render();
+
+      enqueueSale(sale);
+      flushQueue();
+
       alert("Vente validée");
     }
 
@@ -617,11 +685,6 @@
       }).join("");
     }
 
-    function toggleReport() {
-      const el = document.getElementById("reportCard");
-      el.style.display = el.style.display === "none" ? "block" : "none";
-    }
-
     function resetAll() {
       if (!confirm("Réinitialiser toute la caisse ?")) return;
 
@@ -633,9 +696,11 @@
       };
 
       localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(QUEUE_KEY);
       document.getElementById("paid").value = "";
       document.getElementById("paymentMethod").value = "Cash";
       render();
+      updateSyncStatus();
     }
 
     function installApp() {
@@ -657,6 +722,10 @@
       }
     }
 
+    window.addEventListener("online", flushQueue);
+    window.addEventListener("online", updateSyncStatus);
+    window.addEventListener("offline", updateSyncStatus);
+
     function render() {
       renderStocks();
       renderProducts();
@@ -665,6 +734,7 @@
       renderSales();
       renderReport();
       updateDriveView();
+      updateSyncStatus();
       saveState();
     }
 
@@ -673,6 +743,7 @@
       loadDriveLink();
       render();
       registerSW();
+      flushQueue();
     };
   </script>
 </body>
