@@ -2,9 +2,24 @@
   "name": "Caisse Event Premium",
   "short_name": "Caisse",
   "start_url": "./",
+  "scope": "./",
   "display": "standalone",
+  "orientation": "portrait-primary",
   "background_color": "#f6efe7",
   "theme_color": "#3b2418",
-  "description": "Caisse event premium avec Google Sheet",
-  "icons": []
+  "description": "Caisse Latabatra — ventes, stock et sauvegardes locales.",
+  "icons": [
+    {
+      "src": "icons/icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-maskable.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
 }
