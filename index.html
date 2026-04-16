@@ -3,38 +3,83 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Encaissement Event</title>
+  <title>Caisse Event</title>
+  <meta name="theme-color" content="#4e342e" />
+  <link rel="manifest" href="manifest.json" />
   <style>
     * { box-sizing: border-box; }
     body {
       margin: 0;
       font-family: Arial, sans-serif;
-      background: #f1f5f9;
-      color: #0f172a;
+      background: #f5efe6;
+      color: #2b211d;
     }
     .container {
-      max-width: 1300px;
+      max-width: 1200px;
       margin: 0 auto;
       padding: 12px;
     }
-    .grid {
-      display: grid;
-      grid-template-columns: 2fr 1fr;
-      gap: 16px;
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
     }
-    .card {
-      background: #fff;
-      border-radius: 16px;
-      padding: 16px;
-      margin-bottom: 16px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-    }
-    h1, h2, h3 {
-      margin-top: 0;
+    .title {
+      font-size: 28px;
+      font-weight: bold;
+      color: #3e2723;
     }
     .muted {
-      color: #64748b;
+      color: #6d4c41;
       font-size: 14px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: 1.6fr 1fr;
+      gap: 14px;
+    }
+    .card {
+      background: #fffaf3;
+      border: 1px solid #d7ccc8;
+      border-radius: 16px;
+      padding: 14px;
+      margin-bottom: 14px;
+      box-shadow: 0 2px 8px rgba(62,39,35,0.08);
+    }
+    h1, h2, h3 { margin-top: 0; }
+    .products, .stocks, .sales-list, .report-list, .summary-grid {
+      display: grid;
+      gap: 10px;
+    }
+    .products {
+      grid-template-columns: repeat(2, 1fr);
+    }
+    .stocks {
+      grid-template-columns: repeat(2, 1fr);
+    }
+    .product, .stock-item, .sale-item, .report-item, .summary-item {
+      border: 1px solid #d7ccc8;
+      border-radius: 12px;
+      padding: 12px;
+      background: #fff;
+    }
+    .product {
+      background: #efebe9;
+      cursor: pointer;
+      text-align: left;
+    }
+    .product.disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+    .summary-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #f8f2ea;
     }
     .row {
       display: flex;
@@ -42,123 +87,117 @@
       flex-wrap: wrap;
       align-items: center;
     }
-    .products, .stocks, .sales-list, .report-list {
-      display: grid;
-      gap: 10px;
-    }
-    .products {
-      grid-template-columns: repeat(3, 1fr);
-    }
-    .stocks {
-      grid-template-columns: repeat(3, 1fr);
-    }
-    .product, .stock-item, .sale-item, .report-item, .summary-item {
-      border: 1px solid #e2e8f0;
-      border-radius: 12px;
-      padding: 12px;
-      background: #fff;
-    }
-    .product {
-      cursor: pointer;
-      background: #f8fafc;
-    }
-    .product.disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-    button, input, select {
+    input, select, button {
       font: inherit;
+    }
+    input, select {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #bcaaa4;
+      border-radius: 10px;
+      background: #fff;
+      color: #2b211d;
     }
     button {
       border: none;
       border-radius: 10px;
-      padding: 10px 14px;
+      padding: 12px 14px;
       cursor: pointer;
       font-weight: bold;
     }
-    input, select {
-      width: 100%;
-      border: 1px solid #cbd5e1;
-      border-radius: 10px;
-      padding: 12px;
-      background: white;
-    }
-    .btn-dark { background: #0f172a; color: white; }
-    .btn-green { background: #16a34a; color: white; }
-    .btn-yellow { background: #facc15; color: #0f172a; }
-    .btn-blue { background: #dbeafe; color: #0f172a; }
-    .btn-red { background: #ef4444; color: white; }
-    .qty-controls {
+    .btn-dark { background: #3e2723; color: white; }
+    .btn-brown { background: #6d4c41; color: white; }
+    .btn-light { background: #d7ccc8; color: #2b211d; }
+    .btn-beige { background: #efebe9; color: #2b211d; }
+    .btn-red { background: #8d6e63; color: white; }
+    .qty-line {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 10px;
       margin-top: 10px;
     }
-    .qty-btn {
-      width: 34px;
-      height: 34px;
+    .qty-line button {
+      width: 42px;
+      height: 42px;
       padding: 0;
-      background: #f1f5f9;
-      color: #0f172a;
-      border: 1px solid #cbd5e1;
+      font-size: 18px;
     }
-    .summary-grid {
-      display: grid;
-      gap: 8px;
+    .qty-box {
+      min-width: 36px;
+      text-align: center;
+      font-weight: bold;
     }
-    .summary-item {
-      display: flex;
-      justify-content: space-between;
-    }
-    .change-box {
-      background: #dcfce7;
+    .money-box {
+      background: #ede0d4;
       border-radius: 12px;
       padding: 12px;
+      margin-top: 12px;
     }
-    .change-value {
-      font-size: 26px;
+    .money-value {
+      font-size: 28px;
       font-weight: bold;
-      color: #15803d;
+      color: #4e342e;
     }
     .danger {
-      color: #dc2626;
+      color: #b71c1c;
       font-size: 14px;
       margin-top: 4px;
     }
-    .top-actions {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
+    .link-box {
+      background: #fff;
+      border: 1px dashed #8d6e63;
+      border-radius: 12px;
+      padding: 12px;
     }
-    .small {
-      font-size: 13px;
+    .link-box a {
+      color: #4e342e;
+      word-break: break-all;
     }
     @media (max-width: 900px) {
-      .grid { grid-template-columns: 1fr; }
-      .products, .stocks { grid-template-columns: repeat(2, 1fr); }
+      .grid {
+        grid-template-columns: 1fr;
+      }
     }
     @media (max-width: 600px) {
-      .products, .stocks { grid-template-columns: 1fr; }
+      .products, .stocks {
+        grid-template-columns: 1fr;
+      }
+      .title {
+        font-size: 24px;
+      }
     }
   </style>
 </head>
 <body>
   <div class="container">
+    <div class="topbar">
+      <div>
+        <div class="title">Caisse Event</div>
+        <div class="muted">Simple, téléphone, beige / marron / noir, avec mode hors ligne après premier chargement.</div>
+      </div>
+      <div class="row">
+        <button class="btn-brown" onclick="installApp()">Installer</button>
+        <button class="btn-dark" onclick="resetAll()">Réinitialiser</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Lien vue globale des ventes</h2>
+      <div class="muted">Colle ici le lien Google Drive ou Google Sheets pour consultation rapide.</div>
+      <div class="row" style="margin-top:10px;">
+        <div style="flex:1;">
+          <input id="driveLink" type="url" placeholder="https://docs.google.com/..." oninput="saveDriveLink()" />
+        </div>
+        <button class="btn-brown" onclick="openDriveLink()">Ouvrir</button>
+      </div>
+      <div class="link-box" style="margin-top:10px;">
+        <div class="muted">Lien enregistré :</div>
+        <a id="driveLinkView" href="#" target="_blank" rel="noopener noreferrer">Aucun lien enregistré</a>
+      </div>
+    </div>
+
     <div class="grid">
       <div>
-        <div class="card">
-          <div class="row" style="justify-content:space-between; align-items:flex-start;">
-            <div>
-              <h1>Encaissement Event</h1>
-              <div class="muted">Caisse simple avec stock, panier, validation, total vendu, total rendu et historique.</div>
-            </div>
-            <div class="top-actions">
-              <button class="btn-green" onclick="resetAll()">Réinitialiser</button>
-              <button class="btn-blue" onclick="toggleReport()">Voir / masquer rapport</button>
-            </div>
-          </div>
-        </div>
-
         <div class="card">
           <h2>Stock initial</h2>
           <div class="stocks" id="stocks"></div>
@@ -175,9 +214,9 @@
           <h2>Panier client</h2>
           <div id="cart"></div>
 
-          <div style="margin-top:16px; border-top:1px solid #e2e8f0; padding-top:16px;">
+          <div style="border-top:1px solid #d7ccc8; margin-top:14px; padding-top:14px;">
             <div class="summary-item">
-              <strong>Total panier</strong>
+              <span>Total panier</span>
               <strong id="cartTotal">0 Ar</strong>
             </div>
 
@@ -196,21 +235,20 @@
             </div>
 
             <div class="row" style="margin-top:10px;">
-              <button class="btn-blue small" onclick="setPaid(10000)">10k</button>
-              <button class="btn-blue small" onclick="setPaid(20000)">20k</button>
-              <button class="btn-blue small" onclick="setPaid(30000)">30k</button>
-              <button class="btn-blue small" onclick="setPaid(50000)">50k</button>
-              <button class="btn-blue small" onclick="setPaid(100000)">100k</button>
+              <button class="btn-light" onclick="setPaid(10000)">10k</button>
+              <button class="btn-light" onclick="setPaid(20000)">20k</button>
+              <button class="btn-light" onclick="setPaid(50000)">50k</button>
+              <button class="btn-light" onclick="setPaid(100000)">100k</button>
             </div>
 
-            <div class="change-box" style="margin-top:12px;">
+            <div class="money-box">
               <div class="muted">Rendu</div>
-              <div class="change-value" id="changeValue">0 Ar</div>
+              <div class="money-value" id="changeValue">0 Ar</div>
               <div id="insufficient" class="danger" style="display:none;">Montant insuffisant</div>
             </div>
 
             <button class="btn-dark" style="width:100%; margin-top:12px;" onclick="validateSale()">Valider la vente</button>
-            <button class="btn-yellow" style="width:100%; margin-top:8px;" onclick="cancelLastSale()">Annuler dernière vente</button>
+            <button class="btn-beige" style="width:100%; margin-top:8px;" onclick="cancelLastSale()">Annuler dernière vente</button>
           </div>
         </div>
 
@@ -219,15 +257,15 @@
           <div class="summary-grid" id="summary"></div>
         </div>
 
-        <div class="card" id="reportCard" style="display:none;">
-          <h2>Rapport</h2>
+        <div class="card" id="reportCard">
+          <h2>Vue globale</h2>
           <div id="reportPayments"></div>
           <h3 style="margin-top:14px;">Produits</h3>
           <div id="reportProducts" class="report-list"></div>
         </div>
 
         <div class="card">
-          <h2>Historique des ventes</h2>
+          <h2>Historique</h2>
           <div id="sales" class="sales-list"></div>
         </div>
       </div>
@@ -236,22 +274,24 @@
 
   <script>
     const PRODUCTS = [
-      { id: 1, name: "Flan vanille", price: 15000, category: "Pâtisserie" },
-      { id: 2, name: "Flan framboise", price: 19000, category: "Pâtisserie" },
-      { id: 3, name: "Flan passion", price: 19000, category: "Pâtisserie" },
-      { id: 4, name: "Cake", price: 10000, category: "Pâtisserie" },
-      { id: 5, name: "Tarte vanille passion", price: 20000, category: "Tarte" },
-      { id: 6, name: "Tarte vanille caramel", price: 20000, category: "Tarte" },
-      { id: 7, name: "Tarte café", price: 20000, category: "Tarte" },
-      { id: 8, name: "Tarte CBS", price: 20000, category: "Tarte" },
-      { id: 9, name: "Tarte vanille", price: 20000, category: "Tarte" },
-      { id: 10, name: "Jus elegance pourpre", price: 10000, category: "Boisson" },
-      { id: 11, name: "Jus eclat fraicheur", price: 10000, category: "Boisson" },
-      { id: 12, name: "Jus energie doree", price: 10000, category: "Boisson" },
-      { id: 13, name: "Jus tropical vitalite", price: 10000, category: "Boisson" }
+      { id: 1, name: "Flan vanille", price: 15000 },
+      { id: 2, name: "Flan framboise", price: 19000 },
+      { id: 3, name: "Flan passion", price: 19000 },
+      { id: 4, name: "Cake", price: 10000 },
+      { id: 5, name: "Tarte vanille passion", price: 20000 },
+      { id: 6, name: "Tarte vanille caramel", price: 20000 },
+      { id: 7, name: "Tarte café", price: 20000 },
+      { id: 8, name: "Tarte CBS", price: 20000 },
+      { id: 9, name: "Tarte vanille", price: 20000 },
+      { id: 10, name: "Jus elegance pourpre", price: 10000 },
+      { id: 11, name: "Jus eclat fraicheur", price: 10000 },
+      { id: 12, name: "Jus energie doree", price: 10000 },
+      { id: 13, name: "Jus tropical vitalite", price: 10000 }
     ];
 
-    const STORAGE_KEY = "encaissement_event_simple_v1";
+    const STORAGE_KEY = "caisse_event_phone_v2";
+    const DRIVE_KEY = "caisse_event_drive_link_v1";
+    let deferredPrompt = null;
 
     function formatAr(v) {
       return Number(v || 0).toLocaleString("fr-FR") + " Ar";
@@ -267,21 +307,51 @@
       stocks: emptyStocks(),
       stockInitial: emptyStocks(),
       cart: [],
-      sales: [],
-      reportVisible: false
+      sales: []
     };
 
     function loadState() {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
-        try {
-          state = JSON.parse(raw);
-        } catch (e) {}
+        try { state = JSON.parse(raw); } catch(e) {}
       }
     }
 
     function saveState() {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }
+
+    function loadDriveLink() {
+      const link = localStorage.getItem(DRIVE_KEY) || "";
+      document.getElementById("driveLink").value = link;
+      updateDriveView();
+    }
+
+    function saveDriveLink() {
+      const link = document.getElementById("driveLink").value.trim();
+      localStorage.setItem(DRIVE_KEY, link);
+      updateDriveView();
+    }
+
+    function updateDriveView() {
+      const link = localStorage.getItem(DRIVE_KEY) || "";
+      const a = document.getElementById("driveLinkView");
+      if (link) {
+        a.href = link;
+        a.textContent = link;
+      } else {
+        a.href = "#";
+        a.textContent = "Aucun lien enregistré";
+      }
+    }
+
+    function openDriveLink() {
+      const link = localStorage.getItem(DRIVE_KEY) || "";
+      if (!link) {
+        alert("Aucun lien Drive enregistré");
+        return;
+      }
+      window.open(link, "_blank");
     }
 
     function updateStock(id, value) {
@@ -316,6 +386,21 @@
       } else {
         state.cart.push({ ...product, qty: 1 });
       }
+
+      saveState();
+      render();
+    }
+
+    function setQty(id, newQty) {
+      const qty = Math.max(0, Number(newQty || 0));
+      const item = state.cart.find(i => i.id === id);
+      const maxQty = state.stocks[id] || 0;
+
+      if (!item) return;
+
+      item.qty = Math.min(qty, maxQty);
+      state.cart = state.cart.filter(i => i.qty > 0);
+
       saveState();
       render();
     }
@@ -323,13 +408,7 @@
     function changeQty(id, delta) {
       const item = state.cart.find(i => i.id === id);
       if (!item) return;
-
-      const maxQty = state.stocks[id] || 0;
-      item.qty = Math.max(0, Math.min(maxQty, item.qty + delta));
-      state.cart = state.cart.filter(i => i.qty > 0);
-
-      saveState();
-      render();
+      setQty(id, item.qty + delta);
     }
 
     function removeFromCart(id) {
@@ -341,23 +420,24 @@
     function renderProducts() {
       const el = document.getElementById("products");
       el.innerHTML = PRODUCTS.map(p => {
-        const cartItem = state.cart.find(i => i.id === p.id);
-        const qtyInCart = cartItem ? cartItem.qty : 0;
-        const available = (state.stocks[p.id] || 0) - qtyInCart;
+        const item = state.cart.find(i => i.id === p.id);
+        const inCart = item ? item.qty : 0;
+        const available = (state.stocks[p.id] || 0) - inCart;
         const disabled = available <= 0;
 
         return `
           <button class="product ${disabled ? "disabled" : ""}" ${disabled ? "disabled" : ""} onclick="addToCart(${p.id})">
             <div><strong>${p.name}</strong></div>
             <div style="margin-top:6px;">${formatAr(p.price)}</div>
-            <div class="muted" style="margin-top:8px;">Stock dispo: ${available}</div>
+            <div class="muted" style="margin-top:8px;">Stock dispo : ${available}</div>
+            <div class="muted">Appuyer pour ajouter</div>
           </button>
         `;
       }).join("");
     }
 
     function cartTotal() {
-      return state.cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+      return state.cart.reduce((sum, item) => sum + item.price * item.qty, 0);
     }
 
     function cartItemCount() {
@@ -383,7 +463,7 @@
       const el = document.getElementById("cart");
 
       if (!state.cart.length) {
-        el.innerHTML = `<div class="muted">Aucun produit ajouté.</div>`;
+        el.innerHTML = `<div class="muted">Aucun produit dans le panier.</div>`;
       } else {
         el.innerHTML = state.cart.map(item => `
           <div class="sale-item">
@@ -392,12 +472,14 @@
                 <div><strong>${item.name}</strong></div>
                 <div class="muted">${formatAr(item.price)} x ${item.qty}</div>
               </div>
-              <button class="btn-red small" onclick="removeFromCart(${item.id})">Supprimer</button>
+              <button class="btn-red" onclick="removeFromCart(${item.id})">X</button>
             </div>
-            <div class="qty-controls">
-              <button class="qty-btn" onclick="changeQty(${item.id}, -1)">-</button>
-              <strong>${item.qty}</strong>
-              <button class="qty-btn" onclick="changeQty(${item.id}, 1)">+</button>
+
+            <div class="qty-line">
+              <button class="btn-light" onclick="changeQty(${item.id}, -1)">-</button>
+              <div class="qty-box">${item.qty}</div>
+              <button class="btn-light" onclick="changeQty(${item.id}, 1)">+</button>
+              <input type="number" min="1" max="${state.stocks[item.id] || 0}" value="${item.qty}" onchange="setQty(${item.id}, this.value)" style="max-width:90px;" />
               <strong style="margin-left:auto;">${formatAr(item.price * item.qty)}</strong>
             </div>
           </div>
@@ -409,7 +491,7 @@
       const change = Math.max(0, paidValue() - cartTotal());
       document.getElementById("changeValue").textContent = formatAr(change);
       document.getElementById("insufficient").style.display =
-        paidValue() < cartTotal() && cartTotal() > 0 ? "block" : "none";
+        (paidValue() < cartTotal() && cartTotal() > 0) ? "block" : "none";
     }
 
     function validateSale() {
@@ -430,10 +512,10 @@
       const sale = {
         id: Date.now(),
         items: JSON.parse(JSON.stringify(state.cart)),
-        total,
-        paid,
+        total: total,
+        paid: paid,
         change: paid - total,
-        paymentMethod,
+        paymentMethod: paymentMethod,
         date: new Date().toLocaleDateString("fr-FR"),
         time: new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })
       };
@@ -502,21 +584,13 @@
             ${sale.items.map(item => `${item.name} x${item.qty}`).join(" • ")}
           </div>
           <div class="muted" style="margin-top:8px;">
-            Paiement: ${sale.paymentMethod} | Payé: ${formatAr(sale.paid)} | Rendu: ${formatAr(sale.change)}
+            Paiement : ${sale.paymentMethod} | Payé : ${formatAr(sale.paid)} | Rendu : ${formatAr(sale.change)}
           </div>
         </div>
       `).join("");
     }
 
-    function toggleReport() {
-      state.reportVisible = !state.reportVisible;
-      saveState();
-      render();
-    }
-
     function renderReport() {
-      document.getElementById("reportCard").style.display = state.reportVisible ? "block" : "none";
-
       const paymentStats = { Cash: 0, MVola: 0, "Orange Money": 0 };
       state.sales.forEach(sale => {
         paymentStats[sale.paymentMethod] = (paymentStats[sale.paymentMethod] || 0) + sale.total;
@@ -537,10 +611,15 @@
         return `
           <div class="report-item">
             <div><strong>${product.name}</strong></div>
-            <div class="muted">Initial: ${state.stockInitial[product.id] || 0} | Vendu: ${sold} | Final: ${state.stocks[product.id] || 0}</div>
+            <div class="muted">Initial : ${state.stockInitial[product.id] || 0} | Vendu : ${sold} | Final : ${state.stocks[product.id] || 0}</div>
           </div>
         `;
       }).join("");
+    }
+
+    function toggleReport() {
+      const el = document.getElementById("reportCard");
+      el.style.display = el.style.display === "none" ? "block" : "none";
     }
 
     function resetAll() {
@@ -550,14 +629,32 @@
         stocks: emptyStocks(),
         stockInitial: emptyStocks(),
         cart: [],
-        sales: [],
-        reportVisible: false
+        sales: []
       };
 
       localStorage.removeItem(STORAGE_KEY);
       document.getElementById("paid").value = "";
       document.getElementById("paymentMethod").value = "Cash";
       render();
+    }
+
+    function installApp() {
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+      } else {
+        alert("Sur téléphone, ouvre le menu du navigateur puis 'Ajouter à l'écran d'accueil'.");
+      }
+    }
+
+    window.addEventListener("beforeinstallprompt", (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+    });
+
+    function registerSW() {
+      if ("serviceWorker" in navigator) {
+        navigator.serviceWorker.register("service-worker.js").catch(() => {});
+      }
     }
 
     function render() {
@@ -567,11 +664,16 @@
       renderSummary();
       renderSales();
       renderReport();
+      updateDriveView();
       saveState();
     }
 
     loadState();
-    window.onload = render;
+    window.onload = () => {
+      loadDriveLink();
+      render();
+      registerSW();
+    };
   </script>
 </body>
 </html>
